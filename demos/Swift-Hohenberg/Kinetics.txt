@@ -1,0 +1,2 @@
+- u^{3} - 3 u^{2} \left(E + ENF_{0}\right) + u \left(- C - CNF_{0} - 1\right) - 2 v
+v

@@ -1,0 +1,2 @@
+- u^{5} + u^{3} \left(s + sNF_{0}\right) + u \left(r + rNF_{0}\right) - u - 2 v
+v
