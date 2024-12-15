@@ -10,14 +10,7 @@ from sympy.solvers import solve
 from mpmath import findroot
 import math
 
-# modelname = 'Bru 4'
-# modelname = 'SHDM'
-# modelname = 'Konishi'
-# modelname = 'Swift-Hohenberg'
-modelname = 'Brusselator'
-# modelname = 'Schnakenberg'
-# modelname = 'cp'
-# input('Enter the name of the system you would like to analyze: ')
+modelname = input('Enter the name of the system you would like to analyze: ')
 
 if not os.path.isdir(modelname):
     print('The directory of that system was not found. Create it first and place ' + 
@@ -450,7 +443,7 @@ W13NF = critical_linearsolver(W13NF, negativeRHS, criticalcol, coefsubmatrix, su
 # if equation2!=0:
 #     if len(solve(equation2, dict = True))==0:
 #         print('There are no parameters to find a codimension-two point.')
-#         quit()
+#         exit()
 #     if len(solve(equation2, dict = True))==1:
 #         extraparvals = extraparvals | solve(equation2, dict = True)[0]
 #     else:
@@ -790,7 +783,7 @@ print('Fourth order ready')
 if equation2.subs(extraparvals)!=0:
     if len(solve(equation2.subs(extraparvals), dict = True))==0:
         print('There are no parameters to produce a codimension-two point')
-        quit()
+        exit()
     elif len(solve(equation2.subs(extraparvals), dict = True))==1:
         if simp=='y':
             tempvar = solve(equation2.subs(extraparvals), dict = True)[0]
@@ -3457,13 +3450,44 @@ elif modelname=='Brusselator':
     quantity1 = simplify(quantity1.subs(Ws4NF_eval).subs(Ws24NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(parameters))
     
     quantity2 = simplify(quantity2.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+    
+elif modelname=='Bru 4':
+    negativeRHS.actualcoord = DS_phiphi_01
+    
+    Ws4NF = Vector('Ws4NF')
+    Ws24NF = Vector('Ws24NF')
+    
+    Ws4NF = linearsolver(Ws4NF, negativeRHS, coefmat0)
+    
+    Ws24NF = linearsolver(Ws24NF, negativeRHS, coefmat2)
+    
+    Ws4NF.actualcoord = Ws4NF.actualcoord.subs(phiNF_eval).subs(extraparvals)
+    Ws24NF.actualcoord = Ws24NF.actualcoord.subs(phiNF_eval).subs(extraparvals)
+    
+    Ws4NF_eval = evaluation_dict(Ws4NF)
+    Ws24NF_eval = evaluation_dict(Ws24NF)
+    
+    DS_phiWs4_00 = second_order(0, 0, phiNF, Ws4NF)
+    DS_phiWs24_00 = second_order(0, 0, phiNF, Ws24NF)
+    
+    deltab = symbols('deltab', real = True)
+    
+    quantity1 = psiNF.actualcoord.dot(Mul(2, deltab,
+                                          Add(Mul(2, DS_phiWs4_00), DS_phiWs24_00,
+                                              Mul(2, DS_phiW02_01), DS_phiW22_01))).subs(extraparvals)
+    
+    quantity2 = psiNF.actualcoord.dot(Mul(deltab, SS_phi_01)).subs(extraparvals)
+    
+    quantity1 = simplify(quantity1.subs(Ws4NF_eval).subs(Ws24NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+    
+    quantity2 = simplify(quantity2.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
 
 Maxwell_equation = simplify(Add(Pow(beta3, 2), Mul(- 4, beta1, beta5)))
 
 if Maxwell_equation!=0:
     if len(solve(Maxwell_equation, dict = True))==0:
         print('There are no parameters to find a Maxwell point.')
-        quit()
+        exit()
     elif len(solve(Maxwell_equation, dict = True))==1:
         if simp=='y':
             tempvar = solve(Maxwell_equation, dict = True)[0]

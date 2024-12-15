@@ -26,6 +26,8 @@ parameter_functions = {}
 
 phiunit = 'n'
 
+simp = 'y'
+
 simple = 'y'
 
 def extrapars(extraparvals):

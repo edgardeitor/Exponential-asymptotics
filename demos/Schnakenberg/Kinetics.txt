@@ -1,2 +1,0 @@
-- \lambda_{0} - lambda0NF0 - u + \left(\sigma + sigmaNF_{0}\right) \left(\lambda_{0} + lambda0NF0 + u - \frac{1}{v + \frac{1}{\lambda_{0} + lambda0NF0}}\right)^{2} + \left(v + \frac{1}{\lambda_{0} + lambda0NF0}\right) \left(\lambda_{0} + lambda0NF0 + u\right)^{2}
-\lambda_{0} + lambda0NF0 - \left(\sigma + sigmaNF_{0}\right) \left(\lambda_{0} + lambda0NF0 + u - \frac{1}{v + \frac{1}{\lambda_{0} + lambda0NF0}}\right)^{2} - \left(v + \frac{1}{\lambda_{0} + lambda0NF0}\right) \left(\lambda_{0} + lambda0NF0 + u\right)^{2}
