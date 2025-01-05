@@ -22,21 +22,12 @@ class matrix:
                 if refmatrix[row,col]!=0:
                     self.dummy[row,col] = symbols(name + '_' + str(row+1) + '^' + str(col+1))
                     
-def isfloat(value):
-    '''This function tells you whether a string is a float number or not'''
-    try:
-      float(eval(value))
-      return True
-    except:
-      return False
-                    
 def first_order(ind_a, ind_b, u):
     '''This function is a coded version of F_1'''
     SS = zeros(nvar, 1)
     firstorderderivatives = globals()[f'firstorderderivatives{ind_a}{ind_b}']
     for i in range(nvar):
         SS = Add(SS, Mul(u.dummy[i], firstorderderivatives[i]))
-    SS = eqsubstitution(SS)
     return SS
     
 def second_order(ind_a, ind_b, u, v):
@@ -46,7 +37,6 @@ def second_order(ind_a, ind_b, u, v):
     for i in range(nvar):
         for ii in range(nvar):
             DS = Add(DS, Mul(u.dummy[i], v.dummy[ii], secondorderderivatives[i][ii]))
-    DS = eqsubstitution(DS)
     return Mul(DS, Pow(math.factorial(2), - 1))
     
 def third_order(ind_a, ind_b, u, v, w):
@@ -57,7 +47,6 @@ def third_order(ind_a, ind_b, u, v, w):
         for ii in range(nvar):
             for iii in range(nvar):
                 TS = Add(TS, Mul(u.dummy[i], v.dummy[ii], w.dummy[iii], thirdorderderivatives[i][ii][iii]))
-    TS = eqsubstitution(TS)
     return Mul(TS, Pow(math.factorial(3), - 1))
 
 def fourth_order(ind_a, ind_b, u, v, w, r):
@@ -70,7 +59,6 @@ def fourth_order(ind_a, ind_b, u, v, w, r):
                 for iv in range(nvar):
                     Q4S = Add(Q4S, Mul(u.dummy[i], v.dummy[ii], w.dummy[iii], r.dummy[iv],
                                        fourthorderderivatives[i][ii][iii][iv]))
-    Q4S = eqsubstitution(Q4S)
     return Mul(Q4S, Pow(math.factorial(4), - 1))
 
 def fifth_order(ind_a, ind_b, u, v, w, r, s):
@@ -84,7 +72,6 @@ def fifth_order(ind_a, ind_b, u, v, w, r, s):
                     for v5 in range(nvar):
                         Q5S = Add(Q5S, Mul(u.dummy[i], v.dummy[ii], w.dummy[iii], r.dummy[iv], s.dummy[v5],
                                            fifthorderderivatives[i][ii][iii][iv][v5]))
-    Q5S = eqsubstitution(Q5S)
     return Mul(Q5S, Pow(math.factorial(5), - 1))
 
 def sixth_order(ind_a, ind_b, u, v, w, r, s, t):
@@ -99,7 +86,6 @@ def sixth_order(ind_a, ind_b, u, v, w, r, s, t):
                         for vi in range(nvar):
                             S6S = Add(S6S, Mul(u.dummy[i], v.dummy[ii], w.dummy[iii], r.dummy[iv], s.dummy[v5],
                                                t.dummy[vi], sixthorderderivatives[i][ii][iii][iv][v5][vi]))
-    S6S = eqsubstitution(S6S)
     return Mul(S6S, Pow(math.factorial(6), - 1))
 
 def seventh_order(ind_a, ind_b, u, v, w, r, s, t, x):
@@ -116,7 +102,6 @@ def seventh_order(ind_a, ind_b, u, v, w, r, s, t, x):
                                 S7S = Add(S7S, Mul(u.dummy[i], v.dummy[ii], w.dummy[iii], r.dummy[iv],
                                                    s.dummy[v5], t.dummy[vi], x.dummy[vii],
                                                    seventhorderderivatives[i][ii][iii][iv][v5][vi][vii]))
-    S7S = eqsubstitution(S7S)
     return Mul(S7S, Pow(math.factorial(7), - 1))
 
 def dummyvareval(vector, negativeRHS, coefmat):
@@ -131,15 +116,10 @@ def dummyvareval(vector, negativeRHS, coefmat):
 def linearsolver(vector, negativeRHS, coefmat):
     '''This function solves a linear system with dummy variables and then uses
     the previous function to evaluate the dummy variables'''
-    vector.actualcoord = linsolve(Add(Mul(coefmat.dummy,vector.dummy),negativeRHS.dummy),list(vector.dummy))
+    vector.actualcoord = linsolve(Add(Mul(coefmat.dummy, vector.dummy), negativeRHS.dummy), list(vector.dummy))
     vector.actualcoord = transpose(Matrix(list(vector.actualcoord)))
-    vector.actualcoord = dummyvareval(vector.actualcoord,negativeRHS,coefmat)
+    vector.actualcoord = dummyvareval(vector.actualcoord, negativeRHS, coefmat)
     return vector
-
-def eqsubstitution(expr):
-    for varnum in range(nvar):
-        expr = expr.subs(var[varnum], equilibrium[varnum])
-    return expr
 
 def kernel_determination(vector, coefmat, criticalcol, coefsubmatrix, submatrixrows, submatrixcols):    
     vector.actualcoord[criticalcol] = 1
@@ -186,23 +166,6 @@ def critical_linearsolver(vector, negativeRHS, criticalcol, coefsubmatrix, subma
 def evaluation_dict(vector):
     actual_dict = dict(zip(vector.dummy,
                            simplify(vector.actualcoord.subs(muNF, muval).subs(parameters).subs(extraparvals))))
-    return actual_dict
-
-def special_evaluation_dict(vector):
-    actual_dict = dict(zip(vector.dummy,
-                           vector.actualcoord.subs(kappa,
-                                                   kappaval).subs(muNF, muval).subs(parameters).subs(extraparvals)))
-    return actual_dict
-
-def simplest_evaluation_dict(vector):
-    if kappaval==sqrt(Mul(I, Pow(sqrt(muNF), - 1))) or kappaval== - sqrt(Mul(I, Pow(sqrt(muNF), - 1))):
-        actual_dict = dict(zip(vector.dummy,
-                               vector.actualcoord.subs(bm20NF_eval).subs(bm30NF_eval).subs(kappa,
-                                                                                           kappaval).subs(muNF, muval).subs(parameters).subs(extraparvals)))
-    elif kappaval==sqrt(- Mul(I, Pow(sqrt(muNF), - 1))) or kappaval== - sqrt(- Mul(I, Pow(sqrt(muNF), - 1))):
-        actual_dict = dict(zip(vector.dummy,
-                               vector.actualcoord.subs(b20NF_eval).subs(b30NF_eval).subs(kappa,
-                                                                                         kappaval).subs(muNF, muval).subs(parameters).subs(extraparvals)))
     return actual_dict
 
 def origin_translation(equilibrium, kinetics):
@@ -284,6 +247,6 @@ def evaluation_alpha(alpha):
         .subs(W066NF_eval).subs(W076NF_eval).subs(W16NF_eval).subs(W126NF_eval).subs(W136NF_eval)\
             .subs(W146NF_eval).subs(W156NF_eval).subs(W166NF_eval).subs(W176NF_eval).subs(W26NF_eval)\
                 .subs(W226NF_eval).subs(W236NF_eval).subs(W246NF_eval).subs(W256NF_eval).subs(W266NF_eval)\
-                    .subs(W276NF_eval).subs(W286NF_eval)
+                    .subs(W276NF_eval).subs(W286NF_eval).subs(extraparvals)
                     
     return simplify(alpha)

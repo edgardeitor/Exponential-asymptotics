@@ -1,2 +1,2 @@
-- \left(c + cNF_{0}\right) \left(u + \frac{\alpha + alphaNF_{0}}{\delta}\right) + \left(u + \frac{\alpha + alphaNF_{0}}{\delta}\right)^{2} \left(\frac{\delta \left(c + cNF_{0} - 1\right)}{\alpha + alphaNF_{0}} + v\right) + \frac{\alpha + alphaNF_{0}}{\delta}
-- \left(u + \frac{\alpha + alphaNF_{0}}{\delta}\right)^{2} \left(\frac{\delta \left(c + cNF_{0} - 1\right)}{\alpha + alphaNF_{0}} + v\right) + \left(u + \frac{\alpha + alphaNF_{0}}{\delta}\right) \left(c + cNF_{0} - 1\right)
+a + aNF_{0} - \left(c + cNF_{0}\right) \left(a + aNF_{0} + u\right) + \left(v + \frac{c + cNF_{0} - 1}{a + aNF_{0}}\right) \left(a + aNF_{0} + u\right)^{2}
+- \left(v + \frac{c + cNF_{0} - 1}{a + aNF_{0}}\right) \left(a + aNF_{0} + u\right)^{2} + \left(a + aNF_{0} + u\right) \left(c + cNF_{0} - 1\right)

@@ -10,7 +10,14 @@ from sympy.solvers import solve
 from mpmath import findroot
 import math
 
-modelname = input('Enter the name of the system you would like to analyze: ')
+# modelname = 'Bru 4'
+# modelname = 'SHDM'
+# modelname = 'Konishi'
+modelname = 'Swift-Hohenberg'
+# modelname = 'Brusselator'
+# modelname = 'Schnakenberg'
+# modelname = 'cp'
+# input('Enter the name of the system you would like to analyze: ')
 
 if not os.path.isdir(modelname):
     print('The directory of that system was not found. Create it first and place ' + 
@@ -85,8 +92,6 @@ exec(par2 + ' = symbols(par2, real = True)')
 par1 = eval(par1)
 par2 = eval(par2)
 
-expandingparvals = {par1: 0, par2: 0}
-
 for varnum in range(nvar):
     try:
         equilibrium[varnum] = eval(equilibrium[varnum])
@@ -127,6 +132,8 @@ if not check_equilibrium(equilibrium, kinetics):
 if equilibrium!=[0]*nvar:
     equilibrium, kinetics = origin_translation(equilibrium, kinetics)
     
+eq_subs = dict(zip(var, equilibrium))
+    
 aNF = []
 bNF = []
 
@@ -140,13 +147,15 @@ extraparvals = extrapars(extraparvals)
 
 kinetics = parameter_translation(kinetics, par1, aNF[0], par2, bNF[0])
 
+expandingparvals = {par1: 0, par2: 0}
+
 file = open('Kinetics.txt', 'w')
 for functionnumber in range(nvar):
     file.write(latex(kinetics[functionnumber]) + '\n')
 file.close()
 
-jacobianmat = kinetics.jacobian(var).subs(par1, 0).subs(par2, 0)
-jacobianmat = eqsubstitution(jacobianmat)
+jacobianmat = kinetics.jacobian(var).subs(expandingparvals)
+jacobianmat = jacobianmat.subs(eq_subs)
 
 # Beyond-all-order asymptotics
 
@@ -176,36 +185,40 @@ negativeRHS = Vector('negativeRHS')
 
 for parnum1 in range(7):
     for parnum2 in range(7):
-        exec(f'firstorderderivatives{parnum1}{parnum2} = list()')
-        if parnum1 + parnum2<=5:
-            exec(f'secondorderderivatives{parnum1}{parnum2} = list()')
-            if parnum1 + parnum2<=4:
-                exec(f'thirdorderderivatives{parnum1}{parnum2} = list()')
-                if parnum1 + parnum2<=3:
-                    exec(f'fourthorderderivatives{parnum1}{parnum2} = list()')
-                    if parnum1 + parnum2<=2:
-                        exec(f'fifthorderderivatives{parnum1}{parnum2} = list()')
-                        if parnum1 + parnum2<=1:
-                            exec(f'sixthorderderivatives{parnum1}{parnum2} = list()')
-                            if parnum1 + parnum2==0:
-                                exec(f'seventhorderderivatives{parnum1}{parnum2} = list()')
-        for counter1 in range(nvar):
-            exec(f'firstorderderivatives{parnum1}{parnum2}.append(diff(f{parnum1}{parnum2}, var[{counter1}]))')
+        if parnum1 + parnum2<=6:
+            exec(f'firstorderderivatives{parnum1}{parnum2} = list()')
             if parnum1 + parnum2<=5:
-                exec(f'secondorderderivatives{parnum1}{parnum2}.append(list())')
+                exec(f'secondorderderivatives{parnum1}{parnum2} = list()')
                 if parnum1 + parnum2<=4:
-                    exec(f'thirdorderderivatives{parnum1}{parnum2}.append(list())')
+                    exec(f'thirdorderderivatives{parnum1}{parnum2} = list()')
                     if parnum1 + parnum2<=3:
-                        exec(f'fourthorderderivatives{parnum1}{parnum2}.append(list())')
+                        exec(f'fourthorderderivatives{parnum1}{parnum2} = list()')
                         if parnum1 + parnum2<=2:
-                            exec(f'fifthorderderivatives{parnum1}{parnum2}.append(list())')
+                            exec(f'fifthorderderivatives{parnum1}{parnum2} = list()')
                             if parnum1 + parnum2<=1:
-                                exec(f'sixthorderderivatives{parnum1}{parnum2}.append(list())')
+                                exec(f'sixthorderderivatives{parnum1}{parnum2} = list()')
                                 if parnum1 + parnum2==0:
-                                    exec(f'seventhorderderivatives{parnum1}{parnum2}.append(list())')
+                                    exec(f'seventhorderderivatives{parnum1}{parnum2} = list()')
+        for counter1 in range(nvar):
+            if parnum1 + parnum2<=6:
+                exec(f'auxderc1 = diff(f{parnum1}{parnum2}, var[{counter1}])')
+                exec(f'firstorderderivatives{parnum1}{parnum2}.append(auxderc1.subs(eq_subs))')
+                if parnum1 + parnum2<=5:
+                    exec(f'secondorderderivatives{parnum1}{parnum2}.append(list())')
+                    if parnum1 + parnum2<=4:
+                        exec(f'thirdorderderivatives{parnum1}{parnum2}.append(list())')
+                        if parnum1 + parnum2<=3:
+                            exec(f'fourthorderderivatives{parnum1}{parnum2}.append(list())')
+                            if parnum1 + parnum2<=2:
+                                exec(f'fifthorderderivatives{parnum1}{parnum2}.append(list())')
+                                if parnum1 + parnum2<=1:
+                                    exec(f'sixthorderderivatives{parnum1}{parnum2}.append(list())')
+                                    if parnum1 + parnum2==0:
+                                        exec(f'seventhorderderivatives{parnum1}{parnum2}.append(list())')
             for counter2 in range(nvar):
                 if parnum1 + parnum2<=5:
-                    exec(f'secondorderderivatives{parnum1}{parnum2}[{counter1}].append(diff(firstorderderivatives{parnum1}{parnum2}[{counter1}], var[{counter2}]))')
+                    exec(f'auxderc2 = diff(auxderc1, var[{counter2}])')
+                    exec(f'secondorderderivatives{parnum1}{parnum2}[{counter1}].append(auxderc2.subs(eq_subs))')
                     if parnum1 + parnum2<=4:
                         exec(f'thirdorderderivatives{parnum1}{parnum2}[{counter1}].append(list())')
                         if parnum1 + parnum2<=3:
@@ -218,7 +231,8 @@ for parnum1 in range(7):
                                         exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}].append(list())')
                 for counter3 in range(nvar):
                     if parnum1 + parnum2<=4:
-                        exec(f'thirdorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}].append(diff(secondorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}], var[{counter3}]))')
+                        exec(f'auxderc3 = diff(auxderc2, var[{counter3}])')
+                        exec(f'thirdorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}].append(auxderc3.subs(eq_subs))')
                         if parnum1 + parnum2<=3:
                             exec(f'fourthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}].append(list())')
                             if parnum1 + parnum2<=2:
@@ -229,7 +243,8 @@ for parnum1 in range(7):
                                         exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}].append(list())')
                     for counter4 in range(nvar):
                         if parnum1 + parnum2<=3:
-                            exec(f'fourthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}].append(diff(thirdorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}], var[{counter4}]))')
+                            exec(f'auxderc4 = diff(auxderc3, var[{counter4}])')
+                            exec(f'fourthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}].append(auxderc4.subs(eq_subs))')
                             if parnum1 + parnum2<=2:
                                 exec(f'fifthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}].append(list())')
                                 if parnum1 + parnum2<=1:
@@ -238,19 +253,24 @@ for parnum1 in range(7):
                                         exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}].append(list())')
                         for counter5 in range(nvar):
                             if parnum1 + parnum2<=2:
-                                exec(f'fifthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}].append(diff(fourthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}], var[{counter5}]))')
+                                exec(f'auxderc5 = diff(auxderc4, var[{counter5}])')
+                                exec(f'fifthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}].append(auxderc5.subs(eq_subs))')
                                 if parnum1 + parnum2<=1:
                                     exec(f'sixthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}].append(list())')
                                     if parnum1 + parnum2==0:
                                         exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}].append(list())')
                             for counter6 in range(nvar):
                                 if parnum1 + parnum2<=1:
-                                    exec(f'sixthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}].append(diff(fifthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}], var[{counter6}]))')
+                                    exec(f'auxderc6 = diff(auxderc5, var[{counter6}])')
+                                    exec(f'sixthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}].append(auxderc6.subs(eq_subs))')
                                     if parnum1 + parnum2==0:
                                         exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}].append(list())')
                                         for counter7 in range(nvar):
-                                            exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}][{counter6}].append(diff(sixthorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}][{counter6}], var[{counter7}]))')
-                            
+                                            exec(f'seventhorderderivatives{parnum1}{parnum2}[{counter1}][{counter2}][{counter3}][{counter4}][{counter5}][{counter6}].append(diff(auxderc6, var[{counter7}]).subs(eq_subs))')
+
+for counter in range(1, 7):
+    exec(f'auxderc{counter} = 0')
+
 phiNF = Vector('phi^NF')
 psiNF = Vector('psi^NF')
 
@@ -401,13 +421,9 @@ negativeRHS.actualcoord = DS_phiphi_00
 
 W22NF = linearsolver(W22NF, negativeRHS, coefmat2)
 
-W02NF = evaluation(W02NF)
-W12NF = evaluation(W12NF)
-W22NF = evaluation(W22NF)
-
-W02NF_eval = evaluation_dict(W02NF)
-W12NF_eval = evaluation_dict(W12NF)
-W22NF_eval = evaluation_dict(W22NF)
+for counter in range(3):
+    exec(f'W{counter}2NF_eval = evaluation(W{counter}2NF)')
+    exec(f'W{counter}2NF_eval = evaluation_dict(W{counter}2NF)')    
 
 print('Second order ready')
 
@@ -440,33 +456,6 @@ equation2 = simplify(equation2.subs(W12NF_eval))
 
 W13NF = critical_linearsolver(W13NF, negativeRHS, criticalcol, coefsubmatrix, submatrixrows, submatrixcols)
 
-# if equation2!=0:
-#     if len(solve(equation2, dict = True))==0:
-#         print('There are no parameters to find a codimension-two point.')
-#         exit()
-#     if len(solve(equation2, dict = True))==1:
-#         extraparvals = extraparvals | solve(equation2, dict = True)[0]
-#     else:
-#         print("You have to choose a solution:")
-#         print(solve(equation2.subs(extraparvals), dict = True))
-#         solchoice = input("Which solution would you like to use? ")
-#         while True:
-#             try:
-#                 int(solchoice)
-#                 extraparvals = extraparvals | solve(equation2.subs(extraparvals), dict = True)[int(solchoice) - 1]
-#                 break
-#             except:
-#                 solchoice = input("You did not provide a valid integer. Which solution would you like to use? ")
-    
-# if N(equation2)!=0 and equation2.subs(aNF[1], 0)==0:
-#     extraparvals[aNF[1]] = 0
-# if N(equation2)!=0 and equation2.subs(bNF[1], 0)==0:
-#     extraparvals[bNF[1]] = 0
-# if N(equation2)!=0 and equation2.subs(aNF[2], 0)==0:
-#     extraparvals[aNF[2]] = 0
-# if N(equation2)!=0 and equation2.subs(bNF[2], 0)==0:
-#     extraparvals[bNF[2]] = 0
-
 DS_phiW02_00 = second_order(0, 0, phiNF, W02NF)
 DS_phiW22_00 = second_order(0, 0, phiNF, W22NF)
 TS_phiphiphi_00 = third_order(0, 0, phiNF, phiNF, phiNF)
@@ -477,7 +466,7 @@ Cod2 = psiNF.dummy.dot(negativeRHS.actualcoord)
     
 W123NF = critical_linearsolver(W123NF, negativeRHS, criticalcol, coefsubmatrix, submatrixrows, submatrixcols)
 
-negativeRHS.actualcoord = Mul(2, sqrt(muNF), diffmatrix, phiNF.dummy)
+negativeRHS.actualcoord = Mul(2, muNF, diffmatrix, phiNF.dummy)
 
 TC2 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -495,19 +484,13 @@ negativeRHS.actualcoord = Add(Mul(2, DS_phiW22_00), TS_phiphiphi_00)
 
 W33NF = linearsolver(W33NF, negativeRHS, coefmat3)
 
-W03NF = evaluation(W03NF)
-W13NF = evaluation(W13NF)
-W123NF = evaluation(W123NF)
-W133NF = evaluation(W133NF)
-W23NF = evaluation(W23NF)
-W33NF = evaluation(W33NF)
-
-W03NF_eval = evaluation_dict(W03NF)
-W13NF_eval = evaluation_dict(W13NF)
-W123NF_eval = evaluation_dict(W123NF)
-W133NF_eval = evaluation_dict(W133NF)
-W23NF_eval = evaluation_dict(W23NF)
-W33NF_eval = evaluation_dict(W33NF)
+for counter in range(4):
+    exec(f'W{counter}3NF_eval = evaluation(W{counter}3NF)')
+    exec(f'W{counter}3NF_eval = evaluation_dict(W{counter}3NF)')
+    
+for counter in range(2, 4):
+    exec(f'W1{counter}3NF_eval = evaluation(W1{counter}3NF)')
+    exec(f'W1{counter}3NF_eval = evaluation_dict(W1{counter}3NF)')
 
 print('Third order ready')
 
@@ -677,7 +660,7 @@ SS_W133_10 = first_order(1, 0, W133NF)
 SS_W133_01 = first_order(0, 1, W133NF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W133_10), Mul(bNF[1], SS_W133_01),
-                              Mul(2, sqrt(muNF), diffmatrix, W12NF.dummy)).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W12NF.dummy)).subs(extraparvals)
             
 equation5 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -732,7 +715,7 @@ negativeRHS.actualcoord = Add(Mul(2, DS_phiW123_00), Mul(2, DS_phiW33_00), Mul(4
 
 W224NF = linearsolver(W224NF, negativeRHS, coefmat2)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW133_00), Mul(8, sqrt(muNF), diffmatrix, W22NF.dummy))
+negativeRHS.actualcoord = Add(Mul(2, DS_phiW133_00), Mul(8, muNF, diffmatrix, W22NF.dummy))
 
 W234NF = linearsolver(W234NF, negativeRHS, coefmat2)
 
@@ -752,29 +735,14 @@ negativeRHS.actualcoord = Add(Mul(2, DS_phiW33_00), DS_W22W22_00, Mul(3, TS_phip
 
 W44NF = linearsolver(W44NF, negativeRHS, coefmat4)
 
-W04NF = evaluation(W04NF)
-W024NF = evaluation(W024NF)
-W034NF = evaluation(W034NF)
-W14NF = evaluation(W14NF)
-W124NF = evaluation(W124NF)
-W134NF = evaluation(W134NF)
-W24NF = evaluation(W24NF)
-W224NF = evaluation(W224NF)
-W234NF = evaluation(W234NF)
-W34NF = evaluation(W34NF)
-W44NF = evaluation(W44NF)
-
-W04NF_eval = evaluation_dict(W04NF)
-W024NF_eval = evaluation_dict(W024NF)
-W034NF_eval = evaluation_dict(W034NF)
-W14NF_eval = evaluation_dict(W14NF)
-W124NF_eval = evaluation_dict(W124NF)
-W134NF_eval = evaluation_dict(W134NF)
-W24NF_eval = evaluation_dict(W24NF)
-W224NF_eval = evaluation_dict(W224NF)
-W234NF_eval = evaluation_dict(W234NF)
-W34NF_eval = evaluation_dict(W34NF)
-W44NF_eval = evaluation_dict(W44NF)
+for counter in range(5):
+    exec(f'W{counter}4NF_eval = evaluation(W{counter}4NF)')
+    exec(f'W{counter}4NF_eval = evaluation_dict(W{counter}4NF)')
+    
+for counter1 in range(3):
+    for counter2 in range(2, 4):
+        exec(f'W{counter1}{counter2}4NF_eval = evaluation(W{counter1}{counter2}4NF)')
+        exec(f'W{counter1}{counter2}4NF_eval = evaluation_dict(W{counter1}{counter2}4NF)')        
 
 print('Fourth order ready')
 
@@ -809,9 +777,8 @@ if equation2.subs(extraparvals)!=0:
             except:
                 solchoice = input("You did not provide a valid integer. Which solution would you like to use? ")
 
-W03NF_eval = evaluation_dict(W03NF)
-W13NF_eval = evaluation_dict(W13NF)
-W23NF_eval = evaluation_dict(W23NF)
+for counter in range(3):
+    exec(f'W{counter}3NF_eval = evaluation_dict(W{counter}3NF)')
 
 W04NF_eval = evaluation_dict(W04NF)
 W24NF_eval = evaluation_dict(W24NF)
@@ -835,6 +802,7 @@ except:
 Cod2 = simplify(firstordereval(Cod2))
 Cod2 = Cod2.subs(W02NF_eval).subs(W22NF_eval)
 Cod2 = simplify(firstordereval(Cod2).subs(extraparvals))
+
 try:
     if abs(Cod2)>tol:
         print('You did not provide a Codimension-two point')
@@ -962,8 +930,8 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W034_10), Mul(bNF[1], SS_W034_01),
 
 W035NF = linearsolver(W035NF, negativeRHS, coefmat0)
     
-negativeRHS.actualcoord = Add(Mul(- 2, sqrt(muNF), diffmatrix, W133NF.dummy),
-                              Mul(diffmatrix, phiNF.dummy))
+negativeRHS.actualcoord = Add(Mul(- 2, muNF, diffmatrix, W133NF.dummy),
+                              Mul(muNF, diffmatrix, phiNF.dummy))
 
 alpha1 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -982,7 +950,7 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W134_10), Mul(bNF[1], SS_W134_01),
                               Mul(aNF[2], SS_W133_10), Mul(bNF[2], SS_W133_01),
                               Mul(Pow(aNF[1], 2), SS_W133_20), Mul(aNF[1], bNF[1], SS_W133_11),
                               Mul(Pow(bNF[1], 2), SS_W133_02),
-                              Mul(2, sqrt(muNF), diffmatrix, W13NF.dummy)).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W13NF.dummy)).subs(extraparvals)
 
 alpha2 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -998,7 +966,7 @@ TS_phiphiW133_00 = third_order(0, 0, phiNF, phiNF, W133NF)
 
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW034_00), Mul(2, DS_phiW234_00),
                               Mul(4, DS_W02W133_00), Mul(6, TS_phiphiW133_00),
-                              Mul(4, sqrt(muNF), diffmatrix, W123NF.dummy)).subs(extraparvals)
+                              Mul(4, muNF, diffmatrix, W123NF.dummy)).subs(extraparvals)
 
 alpha3 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1011,7 +979,7 @@ DS_W22W133_00 = second_order(0, 0, W22NF, W133NF)
 
 negativeRHS.actualcoord =  Add(Mul(- 2, DS_phiW034_00), Mul(- 2, DS_W22W133_00),
                                Mul(- 3, TS_phiphiW133_00),
-                               Mul(2, sqrt(muNF), diffmatrix, W123NF.dummy)).subs(extraparvals)
+                               Mul(2, muNF, diffmatrix, W123NF.dummy)).subs(extraparvals)
 
 alpha4 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1226,7 +1194,7 @@ SS_W234_01 = first_order(0, 1, W234NF)
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W234_10), Mul(bNF[1], SS_W234_01),
                               Mul(2, DS_phiW134_00), Mul(2, DS_W12W133_00),
                               Mul(2, aNF[1], DS_phiW133_10), Mul(2, bNF[1], DS_phiW133_01),
-                              Mul(8, sqrt(muNF), diffmatrix, W23NF.dummy)).subs(extraparvals)
+                              Mul(8, muNF, diffmatrix, W23NF.dummy)).subs(extraparvals)
 
 W235NF = linearsolver(W235NF, negativeRHS, coefmat2)
 
@@ -1271,43 +1239,23 @@ W325NF = linearsolver(W325NF, negativeRHS, coefmat3)
 
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW234_00), Mul(2, DS_W22W133_00),
                               Mul(3, TS_phiphiW133_00),
-                              Mul(18, sqrt(muNF), diffmatrix, W33NF.dummy)).subs(extraparvals)
+                              Mul(18, muNF, diffmatrix, W33NF.dummy)).subs(extraparvals)
 
 W335NF = linearsolver(W335NF, negativeRHS, coefmat3)
 
-W05NF = evaluation(W05NF)
-W025NF = evaluation(W025NF)
-W035NF = evaluation(W035NF)
-W15NF = evaluation(W15NF)
-W125NF = evaluation(W125NF)
-W135NF = evaluation(W135NF)
-W145NF = evaluation(W145NF)
-W155NF = evaluation(W155NF)
-W165NF = evaluation(W165NF)
-W175NF = evaluation(W175NF)
-W25NF = evaluation(W25NF)
-W225NF = evaluation(W225NF)
-W235NF = evaluation(W235NF)
-W35NF = evaluation(W35NF)
-W325NF = evaluation(W325NF)
-W335NF = evaluation(W335NF)
-
-W05NF_eval = evaluation_dict(W05NF)
-W025NF_eval = evaluation_dict(W025NF)
-W035NF_eval = evaluation_dict(W035NF)
-W15NF_eval = evaluation_dict(W15NF)
-W125NF_eval = evaluation_dict(W125NF)
-W135NF_eval = evaluation_dict(W135NF)
-W145NF_eval = evaluation_dict(W145NF)
-W155NF_eval = evaluation_dict(W155NF)
-W165NF_eval = evaluation_dict(W165NF)
-W175NF_eval = evaluation_dict(W175NF)
-W25NF_eval = evaluation_dict(W25NF)
-W225NF_eval = evaluation_dict(W225NF)
-W235NF_eval = evaluation_dict(W235NF)
-W35NF_eval = evaluation_dict(W35NF)
-W325NF_eval = evaluation_dict(W325NF)
-W335NF_eval = evaluation_dict(W335NF)
+for counter in range(4):
+    exec(f'W{counter}5NF_eval = evaluation(W{counter}5NF)')
+    exec(f'W{counter}5NF_eval = evaluation_dict(W{counter}5NF)')
+    
+for counter1 in range(4):
+    if counter1==1:
+        for counter2 in range(2, 8):
+            exec(f'W{counter1}{counter2}5NF_eval = evaluation(W{counter1}{counter2}5NF)')
+            exec(f'W{counter1}{counter2}5NF_eval = evaluation_dict(W{counter1}{counter2}5NF)')
+    else:
+        for counter2 in range(2, 4):
+            exec(f'W{counter1}{counter2}5NF_eval = evaluation(W{counter1}{counter2}5NF)')
+            exec(f'W{counter1}{counter2}5NF_eval = evaluation_dict(W{counter1}{counter2}5NF)')
 
 print('Fifth order ready')
 
@@ -1544,7 +1492,7 @@ W036NF = linearsolver(W036NF, negativeRHS, coefmat0)
 
 DS_W133W133_00 = second_order(0, 0, W133NF, W133NF)
 
-negativeRHS.actualcoord = Add(DS_W133W133_00, Mul(2, diffmatrix, W02NF.dummy))
+negativeRHS.actualcoord = Add(DS_W133W133_00, Mul(2, muNF, diffmatrix, W02NF.dummy))
 
 W046NF = linearsolver(W046NF, negativeRHS, coefmat0)
 
@@ -1598,7 +1546,7 @@ W066NF = linearsolver(W066NF, negativeRHS, coefmat0)
 
 DS_phiW15_00 = second_order(0, 0, phiNF, W15NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW15_00), Mul(2, diffmatrix, W02NF.dummy))
+negativeRHS.actualcoord = Add(Mul(2, DS_phiW15_00), Mul(2, muNF, diffmatrix, W02NF.dummy))
 
 W076NF = linearsolver(W076NF, negativeRHS, coefmat0)
 
@@ -1606,8 +1554,8 @@ SS_W15_10 = first_order(1, 0, W15NF)
 SS_W15_01 = first_order(0, 1, W15NF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W15_10), Mul(bNF[1], SS_W15_01),
-                              Mul(- 2, sqrt(muNF), diffmatrix, W134NF.dummy),
-                              Mul(diffmatrix, W12NF.dummy)).subs(extraparvals)
+                              Mul(- 2, muNF, diffmatrix, W134NF.dummy),
+                              Mul(muNF, diffmatrix, W12NF.dummy)).subs(extraparvals)
 
 alpha12 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1636,7 +1584,7 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W125_10), Mul(bNF[1], SS_W125_01),
                               Mul(Pow(aNF[1], 2), bNF[1], SS_W133_21),
                               Mul(aNF[1], Pow(bNF[1], 2), SS_W133_12),
                               Mul(Pow(bNF[1], 3), SS_W133_03),
-                              Mul(2, sqrt(muNF), diffmatrix, W14NF.dummy)).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W14NF.dummy)).subs(extraparvals)
 
 alpha22 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1673,7 +1621,7 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W135_10), Mul(bNF[1], SS_W135_01),
                               Mul(4, aNF[1], DS_W02W133_10), Mul(4, bNF[1], DS_W02W133_01),
                               Mul(6, TS_phiphiW134_00), Mul(12, TS_phiW12W133_00),
                               Mul(6, aNF[1], TS_phiphiW133_10), Mul(6, bNF[1], TS_phiphiW133_01),
-                              Mul(4, sqrt(muNF), diffmatrix, W124NF.dummy)).subs(extraparvals)
+                              Mul(4, muNF, diffmatrix, W124NF.dummy)).subs(extraparvals)
 
 alpha32 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1696,7 +1644,7 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W145_10), Mul(bNF[1], SS_W145_01),
                               Mul(- 2, aNF[1], DS_W22W133_10), Mul(- 2, bNF[1], DS_W22W133_01),
                               Mul(- 3, TS_phiphiW134_00), Mul(- 6, TS_phiW12W133_00),
                               Mul(- 3, aNF[1], TS_phiphiW133_10), Mul(- 3, bNF[1], TS_phiphiW133_01),
-                              Mul(2, sqrt(muNF), diffmatrix, W124NF.dummy)).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W124NF.dummy)).subs(extraparvals)
 
 alpha42 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -2191,8 +2139,8 @@ negativeRHS.actualcoord = Add(Mul(2, DS_phiW175_00), Mul(2, DS_phiW325_00),
 
 W236NF = linearsolver(W236NF, negativeRHS, coefmat2)
 
-negativeRHS.actualcoord = Add(- DS_W133W133_00, Mul(- 4, sqrt(muNF), diffmatrix, W234NF.dummy),
-                              Mul(2, diffmatrix, W22NF.dummy)).subs(extraparvals)
+negativeRHS.actualcoord = Add(- DS_W133W133_00, Mul(- 4, muNF, diffmatrix, W234NF.dummy),
+                              Mul(2, muNF, diffmatrix, W22NF.dummy)).subs(extraparvals)
 
 W246NF = linearsolver(W246NF, negativeRHS, coefmat2)
 
@@ -2212,7 +2160,7 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W235_10), Mul(bNF[1], SS_W235_01),
                               Mul(2, aNF[2], DS_phiW133_10), Mul(2, bNF[2], DS_phiW133_01),
                               Mul(2, Pow(aNF[1], 2), DS_phiW133_20), Mul(2, aNF[1], bNF[1], DS_phiW133_11),
                               Mul(2, Pow(bNF[1], 2), DS_phiW133_02),
-                              Mul(8, sqrt(muNF), diffmatrix, W24NF.dummy)).subs(extraparvals)
+                              Mul(8, muNF, diffmatrix, W24NF.dummy)).subs(extraparvals)
 
 W256NF = linearsolver(W256NF, negativeRHS, coefmat2)
 
@@ -2225,7 +2173,7 @@ negativeRHS.actualcoord = Add(Mul(2, DS_phiW135_00), Mul(2, DS_phiW335_00),
                               Mul(2, DS_W123W133_00), Mul(3, TS_phiphiW034_00),
                               Mul(6, TS_phiphiW234_00), Mul(12, TS_phiW133W02_00),
                               Mul(6, TS_phiW133W22_00), Mul(12, Q4S_phiphiphiW133_00),
-                              Mul(12, sqrt(muNF), diffmatrix, W224NF.dummy)).subs(extraparvals)
+                              Mul(12, muNF, diffmatrix, W224NF.dummy)).subs(extraparvals)
 
 W266NF = linearsolver(W266NF, negativeRHS, coefmat2)
 
@@ -2234,65 +2182,33 @@ TS_phiW22W133_00 = third_order(0, 0, phiNF, W22NF, W133NF)
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW145_00), Mul(- 2, DS_W22W034_00),
                               Mul(- 2, DS_W133W33_00), Mul(- 3, TS_phiphiW034_00),
                               Mul(- 6, TS_phiW22W133_00), Mul(- 4, Q4S_phiphiphiW133_00),
-                              Mul(4, sqrt(muNF), diffmatrix, W224NF.dummy)).subs(extraparvals)
+                              Mul(4, muNF, diffmatrix, W224NF.dummy)).subs(extraparvals)
 
 W276NF = linearsolver(W276NF, negativeRHS, coefmat2)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW15_00), Mul(- 4, sqrt(muNF), diffmatrix, W234NF.dummy),
-                              Mul(2, diffmatrix, W22NF.dummy)).subs(extraparvals)
+negativeRHS.actualcoord = Add(Mul(2, DS_phiW15_00), Mul(- 4, muNF, diffmatrix, W234NF.dummy),
+                              Mul(2, muNF, diffmatrix, W22NF.dummy)).subs(extraparvals)
 
 W286NF = linearsolver(W286NF, negativeRHS, coefmat2)
 
-W06NF = evaluation(W06NF)
-W026NF = evaluation(W026NF)
-W036NF = evaluation(W036NF)
-W046NF = evaluation(W046NF)
-W056NF = evaluation(W056NF)
-W066NF = evaluation(W066NF)
-W076NF = evaluation(W076NF)
-W16NF = evaluation(W16NF)
-W126NF = evaluation(W126NF)
-W136NF = evaluation(W136NF)
-W146NF = evaluation(W146NF)
-W156NF = evaluation(W156NF)
-W166NF = evaluation(W166NF)
-W176NF = evaluation(W176NF)
-W26NF = evaluation(W26NF)
-W226NF = evaluation(W226NF)
-W236NF = evaluation(W236NF)
-W246NF = evaluation(W246NF)
-W256NF = evaluation(W256NF)
-W266NF = evaluation(W266NF)
-W276NF = evaluation(W276NF)
-W286NF = evaluation(W286NF)
-
-W06NF_eval = evaluation_dict(W06NF)
-W026NF_eval = evaluation_dict(W026NF)
-W036NF_eval = evaluation_dict(W036NF)
-W046NF_eval = evaluation_dict(W046NF)
-W056NF_eval = evaluation_dict(W056NF)
-W066NF_eval = evaluation_dict(W066NF)
-W076NF_eval = evaluation_dict(W076NF)
-W16NF_eval = evaluation_dict(W16NF)
-W126NF_eval = evaluation_dict(W126NF)
-W136NF_eval = evaluation_dict(W136NF)
-W146NF_eval = evaluation_dict(W146NF)
-W156NF_eval = evaluation_dict(W156NF)
-W166NF_eval = evaluation_dict(W166NF)
-W176NF_eval = evaluation_dict(W176NF)
-W26NF_eval = evaluation_dict(W26NF)
-W226NF_eval = evaluation_dict(W226NF)
-W236NF_eval = evaluation_dict(W236NF)
-W246NF_eval = evaluation_dict(W246NF)
-W256NF_eval = evaluation_dict(W256NF)
-W266NF_eval = evaluation_dict(W266NF)
-W276NF_eval = evaluation_dict(W276NF)
-W286NF_eval = evaluation_dict(W286NF)
+for counter in range(3):
+    exec(f'W{counter}6NF_eval = evaluation(W{counter}6NF)')
+    exec(f'W{counter}6NF_eval = evaluation_dict(W{counter}6NF)')
+    
+for counter1 in range(3):
+    if counter1<2:
+        for counter2 in range(2, 8):
+            exec(f'W{counter1}{counter2}6NF_eval = evaluation(W{counter1}{counter2}6NF)')
+            exec(f'W{counter1}{counter2}6NF_eval = evaluation_dict(W{counter1}{counter2}6NF)')
+    else:
+        for counter2 in range(2, 9):
+            exec(f'W{counter1}{counter2}6NF_eval = evaluation(W{counter1}{counter2}6NF)')
+            exec(f'W{counter1}{counter2}6NF_eval = evaluation_dict(W{counter1}{counter2}6NF)')
 
 print('Sixth order ready')
 
-alpha13 = psiNF.dummy.dot(Add(Mul(2, sqrt(muNF), diffmatrix, W15NF.dummy),
-                              Mul(diffmatrix, W133NF.dummy))).subs(extraparvals)
+alpha13 = psiNF.dummy.dot(Add(Mul(2, muNF, diffmatrix, W15NF.dummy),
+                              Mul(muNF, diffmatrix, W133NF.dummy))).subs(extraparvals)
 
 SS_W16_10 = first_order(1, 0, W16NF)
 SS_W16_01 = first_order(0, 1, W16NF)
@@ -2303,8 +2219,8 @@ SS_W15_02 = first_order(0, 2, W15NF)
 alpha23 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W16_10), Mul(bNF[1], SS_W16_01),
                               Mul(aNF[2], SS_W15_10), Mul(bNF[2], SS_W15_01),
                               Mul(Pow(aNF[1], 2), SS_W15_20), Mul(aNF[1], bNF[1], SS_W15_11),
-                              Mul(Pow(bNF[1], 2), SS_W15_02), Mul(- 2, sqrt(muNF), diffmatrix, W125NF.dummy),
-                              Mul(diffmatrix, W13NF.dummy))).subs(extraparvals)
+                              Mul(Pow(bNF[1], 2), SS_W15_02), Mul(- 2, muNF, diffmatrix, W125NF.dummy),
+                              Mul(muNF, diffmatrix, W13NF.dummy))).subs(extraparvals)
 
 DS_phiW076_00 = second_order(0, 0, phiNF, W076NF)
 DS_phiW286_00 = second_order(0, 0, phiNF, W286NF)
@@ -2313,15 +2229,15 @@ TS_phiphiW15_00 = third_order(0, 0, phiNF, phiNF, W15NF)
 
 alpha33 = psiNF.dummy.dot(Add(Mul(2, DS_phiW076_00), Mul(2, DS_phiW286_00),
                               Mul(4, DS_W02W15_00), Mul(6, TS_phiphiW15_00),
-                              Mul(- 2, sqrt(muNF), diffmatrix, W135NF.dummy),
-                              Mul(2, diffmatrix, W123NF.dummy))).subs(extraparvals)
+                              Mul(- 2, muNF, diffmatrix, W135NF.dummy),
+                              Mul(2, muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
 
 DS_W22W15_00 = second_order(0, 0, W22NF, W15NF)
 TS_phiphiW15_00 = third_order(0, 0, phiNF, phiNF, W15NF)
 
 alpha43 = psiNF.dummy.dot(Add(Mul(2, DS_phiW076_00), Mul(2, DS_W22W15_00),
-                              Mul(3, TS_phiphiW15_00), Mul(- 2, sqrt(muNF), diffmatrix, W145NF.dummy),
-                              Mul(diffmatrix, W123NF.dummy))).subs(extraparvals)
+                              Mul(3, TS_phiphiW15_00), Mul(- 2, muNF, diffmatrix, W145NF.dummy),
+                              Mul(muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
 
 SS_W126_10 = first_order(1, 0, W126NF)
 SS_W126_01 = first_order(0, 1, W126NF)
@@ -2362,7 +2278,7 @@ alpha53 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W126_10), Mul(bNF[1], SS_W126_01),
                               Mul(Pow(aNF[1], 2), Pow(bNF[1], 2), SS_W133_22),
                               Mul(aNF[1], Pow(bNF[1], 3), SS_W133_13),
                               Mul(Pow(bNF[1], 4), SS_W133_04),
-                              Mul(2, sqrt(muNF), diffmatrix, W155NF.dummy))).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W155NF.dummy))).subs(extraparvals)
 
 SS_W136_10 = first_order(1, 0, W136NF)
 SS_W136_01 = first_order(0, 1, W136NF)
@@ -2443,7 +2359,7 @@ alpha63 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W136_10), Mul(bNF[1], SS_W136_01),
                           Mul(12, bNF[1], TS_phiW12W133_01), Mul(6, aNF[2], TS_phiphiW133_10),
                           Mul(6, bNF[2], TS_phiphiW133_01), Mul(6, Pow(aNF[1], 2), TS_phiphiW133_20),
                           Mul(6, aNF[1], bNF[1], TS_phiphiW133_11), Mul(6, Pow(bNF[1], 2), TS_phiphiW133_02),
-                          Mul(4, sqrt(muNF), diffmatrix, W165NF.dummy))).subs(extraparvals)
+                          Mul(4, muNF, diffmatrix, W165NF.dummy))).subs(extraparvals)
 
 DS_phiW066_00 = second_order(0, 0, phiNF, W066NF)
 DS_phiW266_00 = second_order(0, 0, phiNF, W266NF)
@@ -2481,7 +2397,7 @@ alpha73 = psiNF.dummy.dot(Add(Mul(2, DS_phiW066_00), Mul(2, DS_phiW266_00),
                               Mul(12, Q4S_phiphiphiW034_00), Mul(12, Q4S_phiphiphiW234_00),
                               Mul(48, Q4S_phiphiW133W02_00), Mul(24, Q4S_phiphiW133W22_00),
                               Mul(30, Q5S_phiphiphiphiW133_00),
-                              Mul(6, sqrt(muNF), diffmatrix, W175NF.dummy))).subs(extraparvals)
+                              Mul(6, muNF, diffmatrix, W175NF.dummy))).subs(extraparvals)
 
 SS_W146_10 = first_order(1, 0, W146NF)
 SS_W146_01 = first_order(0, 1, W146NF)
@@ -2527,7 +2443,7 @@ alpha83 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W146_10), Mul(bNF[1], SS_W146_01),
                               Mul(- 3, Pow(aNF[1], 2), TS_phiphiW133_20),
                               Mul(- 3, aNF[1], bNF[1], TS_phiphiW133_11),
                               Mul(- 3, Pow(bNF[1], 2), TS_phiphiW133_02),
-                              Mul(2, sqrt(muNF), diffmatrix, W165NF.dummy))).subs(extraparvals)
+                              Mul(2, muNF, diffmatrix, W165NF.dummy))).subs(extraparvals)
 
 DS_phiW276_00 = second_order(0, 0, phiNF, W276NF)
 DS_W02W145_00 = second_order(0, 0, W02NF, W145NF)
@@ -2548,7 +2464,7 @@ alpha93 = psiNF.dummy.dot(Add(Mul(- 2, DS_phiW066_00), Mul(2, DS_phiW276_00), Mu
                               Mul(- 12, Q4S_phiphiphiW034_00), Mul(- 4, Q4S_phiphiphiW234_00),
                               Mul(- 24, Q4S_phiphiW133W02_00), Mul(- 24, Q4S_phiphiW133W22_00),
                               Mul(- 20, Q5S_phiphiphiphiW133_00),
-                              Mul(4, sqrt(muNF), diffmatrix, W175NF.dummy))).subs(extraparvals)
+                              Mul(4, muNF, diffmatrix, W175NF.dummy))).subs(extraparvals)
 
 DS_phiW246_00 = second_order(0, 0, phiNF, W246NF)
 DS_W133W034_00 = second_order(0, 0, W133NF, W034NF)
@@ -2556,17 +2472,17 @@ TS_phiW133W133_00 = third_order(0, 0, phiNF, W133NF, W133NF)
 
 alpha103 = psiNF.dummy.dot(Add(Mul(2, DS_phiW246_00), Mul(- 2, DS_W133W034_00),
                            Mul(- 3, TS_phiW133W133_00),
-                           Mul(- 2, sqrt(muNF), diffmatrix, W135NF.dummy),
-                           Mul(2, diffmatrix, W123NF.dummy))).subs(extraparvals)
+                           Mul(- 2, muNF, diffmatrix, W135NF.dummy),
+                           Mul(2, muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
 
 DS_phiW046_00 = second_order(0, 0, phiNF, W046NF)
 DS_W133W234_00 = second_order(0, 0, W133NF, W234NF)
 
 alpha113 = psiNF.dummy.dot(Add(Mul(4, DS_phiW046_00), Mul(2, DS_W133W034_00),
                                Mul(2, DS_W133W234_00), Mul(6, TS_phiW133W133_00),
-                               Mul(- 2, sqrt(muNF), diffmatrix, W135NF.dummy),
-                               Mul(- 4, sqrt(muNF), diffmatrix, W145NF.dummy),
-                               Mul(4, diffmatrix, W123NF.dummy))).subs(extraparvals)
+                               Mul(- 2, muNF, diffmatrix, W135NF.dummy),
+                               Mul(- 4, muNF, diffmatrix, W145NF.dummy),
+                               Mul(4, muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
 
 SS_W156_10 = first_order(1, 0, W156NF)
 SS_W156_01 = first_order(0, 1, W156NF)
@@ -3349,33 +3265,11 @@ alpha114 = Add(alpha153,
               - Mul(alpha7, Pow(alpha1, - 1),
                     Add(alpha33, alpha43, Mul(Add(alpha3, alpha4), alpha13, Pow(alpha1, - 1)))))
 
-if simp=='y':
-    alpha1 = simplify(evaluation_alpha(alpha1))
-    alpha2 = simplify(evaluation_alpha(alpha2))
-    alpha3 = simplify(evaluation_alpha(alpha3))
-    alpha4 = simplify(evaluation_alpha(alpha4))
-    alpha5 = simplify(evaluation_alpha(alpha5))
-    alpha6 = simplify(evaluation_alpha(alpha6))
-    alpha7 = simplify(evaluation_alpha(alpha7))
-else:
-    alpha1 = evaluation_alpha(alpha1)
-    alpha2 = evaluation_alpha(alpha2)
-    alpha3 = evaluation_alpha(alpha3)
-    alpha4 = evaluation_alpha(alpha4)
-    alpha5 = evaluation_alpha(alpha5)
-    alpha6 = evaluation_alpha(alpha6)
-    alpha7 = evaluation_alpha(alpha7)
-
-# if len(solve(alpha52, dict = True))==1:
-#     extraparvals = extraparvals | solve(alpha52, dict = True)[0]
-# else:
-#     print(solve(alpha52, dict = True))
-#     solnum = input('You have to pick a solution: ')
-#     while True:
-#         try:
-#             extraparvals = extraparvals | solve(alpha52, dict = True)[int(solnum - 1)]
-#         except:
-#             solnum = input('The number you input was not valid. You have to pick a valid solution: ')
+for counter in range(1, 8):
+    if simp=='y':
+        exec(f'alpha{counter} = simplify(evaluation_alpha(alpha{counter}))')
+    else:
+        exec(f'alpha{counter} = evaluation_alpha(alpha{counter})')
 
 beta1 = - Mul(Add(Pow(alpha2, 2), Mul(4, alpha1, alpha5)), Pow(Mul(4, Pow(alpha1, 2)), - 1))
 
@@ -3387,6 +3281,7 @@ beta5 = - Mul(Add(Mul(Add(alpha3, alpha4), Add(Mul(3, alpha3), Mul(- 5, alpha4))
 
 if modelname=='Swift-Hohenberg':
     beta = Pow(sqrt(734), - 1)
+    deltaE = symbols('deltaE', real = True)
     
     negativeRHS.actualcoord = DS_phiphi_01
     
@@ -3405,8 +3300,6 @@ if modelname=='Swift-Hohenberg':
     
     DS_phiWs4_00 = second_order(0, 0, phiNF, Ws4NF)
     DS_phiWs24_00 = second_order(0, 0, phiNF, Ws24NF)
-    
-    deltaE = symbols('deltaE', real = True)
     
     quantity = psiNF.actualcoord.dot(Mul(2, deltaE,
                                          Add(Mul(2, DS_phiWs4_00), DS_phiWs24_00,
@@ -3421,41 +3314,26 @@ elif modelname=='SHDM':
     quantity = psiNF.actualcoord.dot(Mul(deltar, SS_phi_01)).subs(extraparvals).subs(phiNF_eval)
     
 elif modelname=='Brusselator':
-    negativeRHS.actualcoord = DS_phiphi_01
-    
-    Ws4NF = Vector('Ws4NF')
-    Ws24NF = Vector('Ws24NF')
-    
-    Ws4NF = linearsolver(Ws4NF, negativeRHS, coefmat0)
-    
-    Ws24NF = linearsolver(Ws24NF, negativeRHS, coefmat2)
-    
-    Ws4NF.actualcoord = Ws4NF.actualcoord.subs(phiNF_eval).subs(extraparvals)
-    Ws24NF.actualcoord = Ws24NF.actualcoord.subs(phiNF_eval).subs(extraparvals)
-    
-    Ws4NF_eval = evaluation_dict(Ws4NF)
-    Ws24NF_eval = evaluation_dict(Ws24NF)
-    
-    DS_phiWs4_00 = second_order(0, 0, phiNF, Ws4NF)
-    DS_phiWs24_00 = second_order(0, 0, phiNF, Ws24NF)
-    
     deltagamma = symbols('deltagamma', real = True)
     
-    quantity1 = psiNF.actualcoord.dot(Mul(2, deltagamma,
-                                          Add(Mul(2, DS_phiWs4_00), DS_phiWs24_00,
-                                              Mul(2, DS_phiW02_01), DS_phiW22_01))).subs(extraparvals)
+    quantity = psiNF.actualcoord.dot(Mul(deltagamma, SS_phi_01)).subs(extraparvals) # Linear
     
-    quantity2 = psiNF.actualcoord.dot(Mul(deltagamma, SS_phi_01)).subs(extraparvals)
+    quantity = simplify(quantity.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
     
-    quantity1 = simplify(quantity1.subs(Ws4NF_eval).subs(Ws24NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+elif modelname=='Bru 4':    
+    deltab = symbols('deltab', real = True)
     
-    quantity2 = simplify(quantity2.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+    quantity = psiNF.actualcoord.dot(Mul(deltab, SS_phi_01)).subs(extraparvals)
     
-elif modelname=='Bru 4':
-    negativeRHS.actualcoord = DS_phiphi_01
+    quantity = simplify(quantity.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+    
+elif modelname=='Schnakenberg':    
+    deltasigma = symbols('deltasigma', real = True)
     
     Ws4NF = Vector('Ws4NF')
     Ws24NF = Vector('Ws24NF')
+    
+    negativeRHS.actualcoord = DS_phiphi_01
     
     Ws4NF = linearsolver(Ws4NF, negativeRHS, coefmat0)
     
@@ -3470,17 +3348,11 @@ elif modelname=='Bru 4':
     DS_phiWs4_00 = second_order(0, 0, phiNF, Ws4NF)
     DS_phiWs24_00 = second_order(0, 0, phiNF, Ws24NF)
     
-    deltab = symbols('deltab', real = True)
+    quantity1 = psiNF.actualcoord.dot(Mul(deltasigma, Add(Mul(4, DS_phiW02_01), Mul(2, DS_phiW22_01),
+                                                          Mul(2, DS_phiWs24_00), Mul(4, DS_phiWs4_00),
+                                                          Mul(3, TS_phiphiphi_01)))).subs(extraparvals)
     
-    quantity1 = psiNF.actualcoord.dot(Mul(2, deltab,
-                                          Add(Mul(2, DS_phiWs4_00), DS_phiWs24_00,
-                                              Mul(2, DS_phiW02_01), DS_phiW22_01))).subs(extraparvals)
-    
-    quantity2 = psiNF.actualcoord.dot(Mul(deltab, SS_phi_01)).subs(extraparvals)
-    
-    quantity1 = simplify(quantity1.subs(Ws4NF_eval).subs(Ws24NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(parameters))
-    
-    quantity2 = simplify(quantity2.subs(phiNF_eval).subs(muNF, muval).subs(parameters))
+    quantity1 = simplify(simplify(quantity1.subs(Ws4NF_eval).subs(Ws24NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(parameters)))
 
 Maxwell_equation = simplify(Add(Pow(beta3, 2), Mul(- 4, beta1, beta5)))
 
@@ -3534,7 +3406,7 @@ Maxwell_equation = simplify(Maxwell_equation.subs(extraparvals))
 
 try:
     if simplify(beta1) > 0 and simplify(beta3) < 0 and simplify(beta5) > 0:
-        print('A Maxwell point has been found for the parameter values you provided.')
+        print('A Maxwell point has been found for the parameter values provided.')
     else:
         print('Something went wrong. Review extra parameters.')
 except:
@@ -3550,134 +3422,22 @@ if simp=='y':
     C11NF = simplify(C11NF)
     C11NF_conj = simplify(C11NF_conj)
 
-# C02NF = - Mul(2, sqrt(beta1), Pow(Mul(- 2, beta3), - 1))
-
-# C22NF = - Mul(exp(Mul(2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 1), Pow(Mul(- 2, beta3), - 1))
-
-# C22NF_conj = - Mul(exp(Mul(- 2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 1), Pow(Mul(- 2, beta3), - 1))
-
-# C123NF = Mul(Pow(I, 3), exp(Mul(pi, xiNF)), Pow(Mul(2, sqrt(beta1)), Rational(3, 2)),
-#              Pow(Mul(- 2, beta3), - Rational(3, 2)))
-
-# C123NF_conj = Mul(Pow(I, 3), exp(Mul(- pi, xiNF)), Pow(Mul(2, sqrt(beta1)), Rational(3, 2)),
-#                   Pow(Mul(- 2, beta3), - Rational(3, 2)))
-
-# C133NF = Mul(I, Rational(1, 2), exp(Mul(pi, xiNF)), Pow(Mul(2, sqrt(beta1)), Rational(1, 2)),
-#              Pow(Mul(- 2, beta3), - Rational(1, 2)), Add(Mul(2, etaNF), I))
-
-# C133NF_conj = Mul(I, Rational(1, 2), exp(Mul(- pi, xiNF)),
-#                   Pow(Mul(2, sqrt(beta1)), Rational(1, 2)),
-#                   Pow(Mul(- 2, beta3), - Rational(1, 2)), Add(Mul(2, etaNF), - I))
-
-# C33NF = Mul(Pow(I, 3), exp(Mul(3, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), Rational(3, 2)),
-#             Pow(Mul(- 2, beta3), - Rational(3, 2)))
-
-# C33NF_conj = Mul(Pow(I, 3), exp(Mul(- 3, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), Rational(3, 2)),
-#                  Pow(Mul(- 2, beta3), - Rational(3, 2)))
-
-# C024NF = Mul(Pow(Mul(2, sqrt(beta1)), 2), Pow(Mul(- 2, beta3), - 2))
-
-# C034NF = - Mul(I, Rational(1, 2), Pow(Mul(2, sqrt(beta1)), 1), Pow(Mul(- 2, beta3), - 1),
-#                Add(1, Mul(- 2, etaNF, I)))
-
-# C034NF_conj = Mul(I, Rational(1, 2), 2, sqrt(beta1), Pow(Mul(- 2, beta3), - 1),
-#                   Add(1, Mul(2, etaNF, I)))
-
-# C224NF = Mul(exp(Mul(2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 2), Pow(Mul(- 2, beta3), - 2))
-
-# C224NF_conj = Mul(exp(Mul(- 2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 2),
-#                   Pow(Mul(- 2, beta3), - 2))
-
-# C234NF = - Mul(I, Rational(1, 2), exp(Mul(2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 1),
-#                Pow(Mul(- 2, beta3), - 1), Add(1, Mul(- 2, etaNF, I)))
-
-# C234NF_conj = Mul(I, Rational(1, 2), exp(Mul(- 2, pi, xiNF)), Pow(Mul(2, sqrt(beta1)), 1),
-#                   Pow(Mul(- 2, beta3), - 1), Add(1, Mul(2, etaNF, I)))
-
-# To compare
-
-# N(Mul(C11NF, phiNF.actualcoord[0]))
-
-# N(Mul(2, C02NF, W02NF.actualcoord[0]).subs(phiNF_eval).subs(extraparvals))
-
-# N(Mul(C22NF, W22NF.actualcoord[0]).subs(phiNF_eval).subs(muNF, muval).subs(extraparvals))
-
-# N(Mul(C33NF, W33NF.actualcoord[0]).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(extraparvals))
-
-# N(Add(Mul(2, C024NF, W024NF.actualcoord[0]), Mul(C034NF, W034NF.actualcoord[0])).subs(W123NF_eval).subs(W133NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(extraparvals))
-
-# N(Add(Mul(C224NF, W224NF.actualcoord[0]), Mul(C234NF, W234NF.actualcoord[0])).subs(W123NF_eval).subs(W133NF_eval).subs(W33NF_eval).subs(W02NF_eval).subs(W22NF_eval).subs(phiNF_eval).subs(muNF, muval).subs(extraparvals))
-
 # Higher order
 
 if simp=='y':
-    alpha12 = simplify(evaluation_alpha(alpha12))
-    alpha22 = simplify(evaluation_alpha(alpha22))
-    alpha32 = simplify(evaluation_alpha(alpha32))
-    alpha42 = simplify(evaluation_alpha(alpha42))
-    alpha52 = simplify(evaluation_alpha(alpha52))
-    alpha62 = simplify(evaluation_alpha(alpha62))
-    alpha72 = simplify(evaluation_alpha(alpha72))
-    alpha13 = simplify(evaluation_alpha(alpha13))
-    alpha23 = simplify(evaluation_alpha(alpha23))
-    alpha33 = simplify(evaluation_alpha(alpha33))
-    alpha43 = simplify(evaluation_alpha(alpha43))
-    alpha53 = simplify(evaluation_alpha(alpha53))
-    alpha63 = simplify(evaluation_alpha(alpha63))
-    alpha73 = simplify(evaluation_alpha(alpha73))
-    alpha83 = simplify(evaluation_alpha(alpha83))
-    alpha93 = simplify(evaluation_alpha(alpha93))
-    alpha103 = simplify(evaluation_alpha(alpha103))
-    alpha113 = simplify(evaluation_alpha(alpha113))
-    alpha123 = simplify(evaluation_alpha(alpha123))
-    alpha133 = simplify(evaluation_alpha(alpha133))
-    alpha143 = simplify(evaluation_alpha(alpha143))
-    alpha153 = simplify(evaluation_alpha(alpha153))
-    alpha14 = simplify(evaluation_alpha(alpha14))
-    alpha24 = simplify(evaluation_alpha(alpha24))
-    alpha34 = simplify(evaluation_alpha(alpha34))
-    alpha44 = simplify(evaluation_alpha(alpha44))
-    alpha54 = simplify(evaluation_alpha(alpha54))
-    alpha64 = simplify(evaluation_alpha(alpha64))
-    alpha74 = simplify(evaluation_alpha(alpha74))
-    alpha84 = simplify(evaluation_alpha(alpha84))
-    alpha94 = simplify(evaluation_alpha(alpha94))
-    alpha104 = simplify(evaluation_alpha(alpha104))
-    alpha114 = simplify(evaluation_alpha(alpha114))
+    for counter in range(1, 8):
+        exec(f'alpha{counter}2 = simplify(evaluation_alpha(alpha{counter}2))')
+    for counter in range(1, 16):
+        exec(f'alpha{counter}3 = simplify(evaluation_alpha(alpha{counter}3))')
+    for counter in range(1, 12):
+        exec(f'alpha{counter}4 = simplify(evaluation_alpha(alpha{counter}4))')
 else:
-    alpha12 = evaluation_alpha(alpha12)
-    alpha22 = evaluation_alpha(alpha22)
-    alpha32 = evaluation_alpha(alpha32)
-    alpha42 = evaluation_alpha(alpha42)
-    alpha52 = evaluation_alpha(alpha52)
-    alpha62 = evaluation_alpha(alpha62)
-    alpha72 = evaluation_alpha(alpha72)
-    alpha13 = evaluation_alpha(alpha13)
-    alpha23 = evaluation_alpha(alpha23)
-    alpha33 = evaluation_alpha(alpha33)
-    alpha43 = evaluation_alpha(alpha43)
-    alpha53 = evaluation_alpha(alpha53)
-    alpha63 = evaluation_alpha(alpha63)
-    alpha73 = evaluation_alpha(alpha73)
-    alpha83 = evaluation_alpha(alpha83)
-    alpha93 = evaluation_alpha(alpha93)
-    alpha103 = evaluation_alpha(alpha103)
-    alpha113 = evaluation_alpha(alpha113)
-    alpha123 = evaluation_alpha(alpha123)
-    alpha133 = evaluation_alpha(alpha133)
-    alpha143 = evaluation_alpha(alpha143)
-    alpha153 = evaluation_alpha(alpha153)
-    alpha14 = evaluation_alpha(alpha14)
-    alpha24 = evaluation_alpha(alpha24)
-    alpha34 = evaluation_alpha(alpha34)
-    alpha44 = evaluation_alpha(alpha44)
-    alpha54 = evaluation_alpha(alpha54)
-    alpha64 = evaluation_alpha(alpha64)
-    alpha74 = evaluation_alpha(alpha74)
-    alpha84 = evaluation_alpha(alpha84)
-    alpha94 = evaluation_alpha(alpha94)
-    alpha104 = evaluation_alpha(alpha104)
-    alpha114 = evaluation_alpha(alpha114)
+    for counter in range(1, 8):
+        exec(f'alpha{counter}2 = evaluation_alpha(alpha{counter}2)')
+    for counter in range(1, 16):
+        exec(f'alpha{counter}3 = evaluation_alpha(alpha{counter}3)')
+    for counter in range(1, 12):
+        exec(f'alpha{counter}4 = evaluation_alpha(alpha{counter}4)')
 
 beta33 = Add(Mul(alpha2, Add(alpha24, - alpha44), Pow(Mul(2, alpha1), - 1)),
              Mul(Add(alpha3, - alpha4), alpha14, Pow(Mul(2, alpha1), - 1)),
@@ -3695,68 +3455,25 @@ beta73 = Add(Mul(alpha3, Add(Mul(2, alpha34), - alpha54), Pow(Mul(6, alpha1), - 
              Mul(alpha3, alpha4, Add(Mul(3, alpha74), - alpha64), Pow(Mul(24, Pow(alpha1, 2)), - 1)),
              Mul(Pow(alpha4, 2), Add(alpha64, alpha74), Pow(Mul(16, Pow(alpha1, 2)), - 1)), alpha114)
 
-if simple=='y':
-    if len(solve(alpha12, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha12, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha12, dict = True)[0]
-    if len(solve(alpha22, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha22, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha22, dict = True)[0]
-    if len(solve(alpha32, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha32, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha32, dict = True)[0]
-    if len(solve(alpha42, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha42, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha42, dict = True)[0]
-    if len(solve(alpha52, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha52, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha52, dict = True)[0]
-    if len(solve(alpha62, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha62, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha62, dict = True)[0]
-    if len(solve(alpha72, dict = True))==1:
-        if simp=='y':
-            tempvar = solve(alpha72, dict = True)[0]
-            for par in tempvar.keys():
-                tempvar[par] = simplify(tempvar[par])
-            extraparvals = extraparvals | tempvar
-        else:
-            extraparvals = extraparvals | solve(alpha72, dict = True)[0]
+if simp=='y':
+    beta33 = simplify(beta33)
+    beta53 = simplify(beta53)
+    beta73 = simplify(beta73)
 
-omega1NF = symbols('omega1NF', real = True)
-omega2NF = symbols('omega2NF', real = True)
-omega3NF = symbols('omega3NF', real = True)
-omega4NF = symbols('omega4NF', real = True)
+if simple=='y':
+    for counter in range(1, 8):
+        if len(solve(eval('alpha' + str(counter) + '2'), dict = True))==1:
+            if simp=='y':
+                tempvar = solve(eval('alpha' + str(counter) + '2'), dict = True)[0]
+                for par in tempvar.keys():
+                    tempvar[par] = simplify(tempvar[par])
+                extraparvals = extraparvals | tempvar
+            else:
+                extraparvals = extraparvals | solve(eval('alpha' + str(counter) + '2'), dict = True)[0]
+
+for counter in range(1, 5):
+    exec(f'omega{counter}NF = symbols("omega{counter}NF", real = True)')
+
 zetaprime = symbols('zetaprime', real = True)
 
 extraparvals[omega2NF] = - Mul(Pow(beta1, 3), Add(alpha64, alpha74),
@@ -3849,6 +3566,7 @@ num = Add(Mul(- 3, Add(Mul(3, I), Mul(2, pi)), Pow(alpha2, 2), Pow(beta3, 3),
 
 A3_coef = Mul(- I, exp(Mul(pi, xiNF)), num, Pow(den, - 1))
 
+print('The value of ANF1 is given by ' + latex(N(C11NF)))
 print('The value of ANF3 is given by ' + latex(N(A3_coef.subs(omega1NF, 0))))
 
 phiinf = Mul(2, sqrt(beta1), Add(etaNF, - xiNF))
@@ -3941,55 +3659,48 @@ gamma111 = Mul(num, Pow(den, - 1))
 
 # Order 2
 
-# C02NF = simplify(Mul(C11NF, C11NF_conj))
+C02NF = simplify(Mul(C11NF, C11NF_conj))
 
-# C22NF = Pow(C11NF, 2)
-
-# C22NF_conj = Pow(C11NF_conj, 2)
+C22NF = Pow(C11NF, 2)
 
 # # Order 3
 
-# C123NF = simplify(Mul(Pow(C11NF, 2), C11NF_conj))
+C123NF = simplify(Mul(Pow(C11NF, 2), C11NF_conj))
 
-# C123NF_conj = simplify(Mul(C11NF, C11NF_conj, C11NF_conj))
+C133NF = Mul(C11NF, Rational(1, 2), Add(Mul(2, etaNF), I))
 
-# C133NF = Mul(C11NF, Rational(1, 2), Add(Mul(2, eta), I))
-
-# C133NF_conj = Mul(C11NF_conj, Rational(1, 2), Add(Mul(2, eta), - I))
-
-# C33NF = Pow(C11NF, 3)
-
-# C33NF_conj = Pow(C11NF_conj, 3)
+C33NF = Pow(C11NF, 3)
 
 # # Order 4
 
-# C024NF = simplify(Mul(Pow(C11NF, 2), Pow(C11NF_conj, 2)))
+C024NF = simplify(Mul(Pow(C11NF, 2), Pow(C11NF_conj, 2)))
 
-# C034NF = simplify(Mul(I, Rational(1, 2), C11NF, C11NF_conj, Add(1, Mul(- 2, eta, I))))
+C034NF = simplify(Mul(I, Rational(1, 2), C11NF, C11NF_conj, Add(1, Mul(- 2, etaNF, I))))
 
-# C034NF_conj = simplify(Mul(- I, Rational(1, 2), C11NF, C11NF_conj, Add(1, Mul(2, eta, I))))
+C034NF_conj = - simplify(Mul(I, Rational(1, 2), C11NF, C11NF_conj, Add(1, Mul(2, etaNF, I))))
 
-# C224NF = simplify(Mul(Pow(C11NF, 3), C11NF_conj))
+C224NF = simplify(Mul(Pow(C11NF, 3), C11NF_conj))
 
-# C224NF_conj = simplify(Mul(C11NF, Pow(C11NF_conj, 3)))
+C234NF = simplify(Mul(I, Rational(1, 2), Add(1, Mul(- 2, etaNF, I)), Pow(C11NF, 2)))
 
-# C234NF = simplify(Mul(I, Rational(1, 2), Pow(C11NF, 2), Add(1, Mul(- 2, eta, I))))
+# To compare with Mathematica
 
-# C234NF_conj = simplify(Mul(- I, Rational(1, 2), Pow(C11NF_conj, 2), Add(1, Mul(2, eta, I))))
+# N(Mul(C11NF, phiNF.actualcoord).subs(extraparvals).subs(muNF, muval).subs(parameters))
 
-# alphaNF = symbols('alphaNF')
+# N(Mul(2, C02NF, W02NF.actualcoord).subs(extraparvals))
+
+# N(Mul(C22NF, W22NF.actualcoord).subs(muNF, muval).subs(extraparvals))
+
+# N(Add(Mul(C123NF, W123NF.actualcoord), Mul(C133NF, W133NF.actualcoord)).subs(extraparvals))
+
+# N(Mul(C33NF, W33NF.actualcoord).subs(muNF, muval).subs(extraparvals))
+
+# N(Add(Mul(2, C024NF, W024NF.actualcoord), Mul(C034NF, W034NF.actualcoord), Mul(C034NF_conj, W034NF.actualcoord)).subs(muNF, muval).subs(extraparvals))
+
+# N(Add(Mul(C224NF, W224NF.actualcoord), Mul(C234NF, W234NF.actualcoord)).subs(muNF, muval).subs(extraparvals))
 
 print('Here, eta = ' + str(N(etaNF)))
-
-# gammavals1 = [Add(- 1, Mul(- eta, I)), Mul(- eta, I), Add(2, Mul(- eta, I)), Add(3, Mul(- eta, I))]
-# gammavals2 = [Add(- 1, Mul(eta, I)), Mul(eta, I), Add(2, Mul(eta, I)), Add(3, Mul(eta, I))]
-    
-kappa = symbols('kappa')
-
-kappaval = sqrt(Mul(I, Pow(sqrt(muNF), - 1)))
-
-c00NF = symbols('c00')
-c20NF = symbols('c20')
+print('Here, xi = ' + str(N(xiNF)))
 
 gammaNF = symbols('gamma')
 
@@ -4007,13 +3718,9 @@ ratio = Mul(h1, Pow(k1, - 1)).subs(gammaNF, Add(3, Mul(- etaNF, I)))
 coefK2 = - Mul(Pow(I, - 1), Rational(1, 6), Add(3, Mul(2, etaNF, I)), exp(Mul(pi, xiNF)),
                Pow(Mul(2, sqrt(beta1)), - Rational(1, 2)),
                Pow(Mul(- 2, beta3), Rational(1, 2)))
-coefK22 = - Mul(Pow(I, - 1), Rational(1, 6), Add(3, Mul(- 2, etaNF, I)), exp(Mul(- pi, xiNF)),
-                Pow(Mul(2, sqrt(beta1)), - Rational(1, 2)),
-                Pow(Mul(- 2, beta3), Rational(1, 2)))
 
 invcoefK2 = Pow(coefK2, - 1)
 
 if simp=='y':
     coefK2 = simplify(coefK2)
-    coefK22 = simplify(coefK22)
     invcoefK2 = simplify(invcoefK2)
