@@ -1,3 +1,5 @@
+# Package import
+
 from IPython import get_ipython
 get_ipython().run_line_magic('reset', '-sf')
 
@@ -10,14 +12,11 @@ from sympy.solvers import solve
 from mpmath import findroot
 import math
 
-# modelname = 'Bru 4'
-# modelname = 'SHDM'
-# modelname = 'Konishi'
-modelname = 'Swift-Hohenberg'
-# modelname = 'Brusselator'
-# modelname = 'Schnakenberg'
-# modelname = 'cp'
-# input('Enter the name of the system you would like to analyze: ')
+# Setting up the variables for the expansion. This includes shifting system to the origin and checking that the steady state provided ar correct
+
+modelname = input('Enter the name of the system you would like to analyze: ')
+
+# Checking for directory
 
 if not os.path.isdir(modelname):
     print('The directory of that system was not found. Create it first and place ' + 
@@ -34,6 +33,8 @@ except:
     
 nvar = len(var)
 
+# Checking for the file functions.py
+
 try:
     exec(open(os.path.dirname(os.path.realpath(__file__)) + '\\functions.py').read())
 except:
@@ -41,6 +42,8 @@ except:
     exit()
 
 file = open('List of Variables.txt', 'w')
+
+# Checking for variables of the system
 
 try:
     var
@@ -56,6 +59,8 @@ for varnum in range(nvar):
         print('The script could not define ' + (var[varnum]) + ' as a variable')
         exit()
     file.write(latex(var[varnum]) + '\n')
+
+# Checking for parameters
 
 try:
     parameters
@@ -80,6 +85,8 @@ for parnum in range(len(unevaluatedparameters)):
     exec(unevaluatedparameters[parnum] + ' = symbols(unevaluatedparameters[parnum], real=True)')
     unevaluatedparameters[parnum] = eval(unevaluatedparameters[parnum])
     
+# Checking for diffusion matrix
+
 try:
     diffmatrix
 except:
@@ -91,6 +98,8 @@ exec(par2 + ' = symbols(par2, real = True)')
 
 par1 = eval(par1)
 par2 = eval(par2)
+
+# Checking for equilibrium
 
 for varnum in range(nvar):
     try:
@@ -108,7 +117,7 @@ except:
         
 diffmatrix = Matrix(diffmatrix)
 
-# Kinetics
+# Checking for kinetics
 
 try:
     kinetics
@@ -157,7 +166,7 @@ file.close()
 jacobianmat = kinetics.jacobian(var).subs(expandingparvals)
 jacobianmat = jacobianmat.subs(eq_subs)
 
-# Beyond-all-order asymptotics
+# Setting up variables like the wavenumber and derivatives of the vector field to generate the vectors defined via the asymptotic expansion
 
 muNF = symbols(r'\mu_{NF}', real=true)
 
@@ -182,6 +191,8 @@ for parnum1 in range(7):
              '.subs(par1, 0).subs(par2, 0))')
 
 negativeRHS = Vector('negativeRHS')
+
+# Computing derivatives of the vector field up to order 7
 
 for parnum1 in range(7):
     for parnum2 in range(7):
@@ -271,6 +282,8 @@ for parnum1 in range(7):
 for counter in range(1, 7):
     exec(f'auxderc{counter} = 0')
 
+# Symbolic definition of the vectors present in the expansion
+
 phiNF = Vector('phi^NF')
 psiNF = Vector('psi^NF')
 
@@ -337,6 +350,8 @@ for counter1 in range(3):
 
 getout = 0
 
+# Determination of a row and a column that can be removed from noninvertible jacobian matrix to obtain an invertible submatrix
+
 for row in range(nvar):
     for col in range(nvar):
         submatrixrows = list(range(nvar))
@@ -364,6 +379,8 @@ for row in range(nvar):
     if getout==1:
         break
     
+# Determination of the kernel of the Jacobian matrix and its transpose
+    
 coefsubmatrix = matrix('dummysubmatrix', nvar - 1, invertiblesubmatrix)
 
 phiNF = kernel_determination(phiNF, coefmat1, criticalcol, coefsubmatrix, submatrixrows, submatrixcols)
@@ -387,6 +404,13 @@ phiNF_eval = evaluation_dict(phiNF)
 psiNF_eval = evaluation_dict(psiNF)
 
 print('First order ready')
+
+# In what comes below, the right-hand side of the equation provided in the paper is defined in the variable negativeRHS.actualcoord and then the corresponding system is solved.
+# When the system has a non-invertible matrix of coefficients, an equation is set up by using the Fredholm alternative. The corresponding equations are solved in order to find
+# the right coefficients of the expansion
+
+# Specifically, the variable defined below represents the second order Taylor expansion of f_{0, 0} at 0 in the directions phi, phi. Once again, this logic is repeated throughout
+# what comes below
 
 DS_phiphi_00 = second_order(0, 0, phiNF, phiNF)
 
@@ -460,7 +484,8 @@ DS_phiW02_00 = second_order(0, 0, phiNF, W02NF)
 DS_phiW22_00 = second_order(0, 0, phiNF, W22NF)
 TS_phiphiphi_00 = third_order(0, 0, phiNF, phiNF, phiNF)
 
-negativeRHS.actualcoord = Add(Mul(4, DS_phiW02_00), Mul(2, DS_phiW22_00), Mul(3, TS_phiphiphi_00))
+negativeRHS.actualcoord = Add(Mul(2, Add(Mul(2, DS_phiW02_00), DS_phiW22_00)),
+                              Mul(3, TS_phiphiphi_00))
 
 Cod2 = psiNF.dummy.dot(negativeRHS.actualcoord)
     
@@ -526,7 +551,7 @@ TS_phiphiW22_00 = third_order(0, 0, phiNF, phiNF, W22NF)
 Q4S_phiphiphiphi_00 = fourth_order(0, 0, phiNF, phiNF, phiNF, phiNF)
 
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW123_00), Mul(2, DS_W02W02_00), DS_W22W22_00,
-                              Mul(6, TS_phiphiW02_00), Mul(3, TS_phiphiW22_00),
+                              Mul(3, Add(Mul(2, TS_phiphiW02_00), TS_phiphiW22_00)),
                               Mul(3, Q4S_phiphiphiphi_00))
 
 W024NF = linearsolver(W024NF, negativeRHS, coefmat0)
@@ -582,10 +607,10 @@ TS_phiphiphi_10 = third_order(1, 0, phiNF, phiNF, phiNF)
 TS_phiphiphi_01 = third_order(0, 1, phiNF, phiNF, phiNF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W123_10), Mul(bNF[1], SS_W123_01),
-                              Mul(4, DS_phiW03_00), Mul(2, DS_phiW23_00),
-                              Mul(4, DS_W12W02_00), Mul(2, DS_W12W22_00),
-                              Mul(4, aNF[1], DS_phiW02_10), Mul(2, aNF[1], DS_phiW22_10),
-                              Mul(4, bNF[1], DS_phiW02_01), Mul(2, bNF[1], DS_phiW22_01),
+                              Mul(2, Add(Mul(2, DS_phiW03_00), DS_phiW23_00)),
+                              Mul(2, Add(Mul(2, DS_W12W02_00), DS_W12W22_00)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_phiW02_10), DS_phiW22_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_phiW02_01), DS_phiW22_01)),
                               Mul(9, TS_phiphiW12_00), Mul(3, aNF[1], TS_phiphiphi_10),
                               Mul(3, bNF[1], TS_phiphiphi_01)).subs(extraparvals)
             
@@ -710,8 +735,8 @@ W24NF = linearsolver(W24NF, negativeRHS, coefmat2)
 DS_phiW33_00 = second_order(0, 0, phiNF, W33NF)
 DS_W02W22_00 = second_order(0, 0, W02NF, W22NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW123_00), Mul(2, DS_phiW33_00), Mul(4, DS_W02W22_00),
-                              Mul(6, TS_phiphiW02_00), Mul(6, TS_phiphiW22_00), Mul(4, Q4S_phiphiphiphi_00))
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW123_00, DS_phiW33_00)), Mul(4, DS_W02W22_00),
+                              Mul(6, Add(TS_phiphiW02_00, TS_phiphiW22_00)), Mul(4, Q4S_phiphiphiphi_00))
 
 W224NF = linearsolver(W224NF, negativeRHS, coefmat2)
 
@@ -745,8 +770,6 @@ for counter1 in range(3):
         exec(f'W{counter1}{counter2}4NF_eval = evaluation_dict(W{counter1}{counter2}4NF)')        
 
 print('Fourth order ready')
-
-# Final evaluation
 
 if equation2.subs(extraparvals)!=0:
     if len(solve(equation2.subs(extraparvals), dict = True))==0:
@@ -783,6 +806,8 @@ for counter in range(3):
 W04NF_eval = evaluation_dict(W04NF)
 W24NF_eval = evaluation_dict(W24NF)
 
+# Turing bifurcation condition
+
 TC1 = simplify(firstordereval(TC1).subs(extraparvals))
 try:
     if abs(TC1)>tol:
@@ -799,6 +824,8 @@ except:
     print('You did not provide a bifurcation point. You have to solve\n')
     print(str(TC2) + ' = 0\n')
     
+# Codimension-two condition
+
 Cod2 = simplify(firstordereval(Cod2))
 Cod2 = Cod2.subs(W02NF_eval).subs(W22NF_eval)
 Cod2 = simplify(firstordereval(Cod2).subs(extraparvals))
@@ -907,10 +934,10 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W024_10), Mul(bNF[1], SS_W024_01),
                               Mul(2, aNF[1], DS_phiW123_10), Mul(2, bNF[1], DS_phiW123_01),
                               Mul(2, aNF[1], DS_W02W02_10), Mul(2, bNF[1], DS_W02W02_01),
                               Mul(aNF[1], DS_W22W22_10), Mul(bNF[1], DS_W22W22_01),
-                              Mul(6, TS_phiphiW03_00), Mul(3, TS_phiphiW23_00),
-                              Mul(12, TS_phiW12W02_00), Mul(6, TS_phiW12W22_00),
-                              Mul(6, aNF[1], TS_phiphiW02_10), Mul(3, aNF[1], TS_phiphiW22_10),
-                              Mul(6, bNF[1], TS_phiphiW02_01), Mul(3, bNF[1], TS_phiphiW22_01),
+                              Mul(3, Add(Mul(2, TS_phiphiW03_00), TS_phiphiW23_00)),
+                              Mul(6, Add(Mul(2, TS_phiW12W02_00), TS_phiW12W22_00)),
+                              Mul(3, aNF[1], Add(Mul(2, TS_phiphiW02_10), TS_phiphiW22_10)),
+                              Mul(3, bNF[1], Add(Mul(2, TS_phiphiW02_01), TS_phiphiW22_01)),
                               Mul(12, Q4S_phiphiphiW12_00), Mul(3, aNF[1], Q4S_phiphiphiphi_10),
                               Mul(3, bNF[1], Q4S_phiphiphiphi_01)).subs(extraparvals)
 
@@ -929,6 +956,8 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W034_10), Mul(bNF[1], SS_W034_01),
                               Mul(2, bNF[1], DS_phiW133_01)).subs(extraparvals)
 
 W035NF = linearsolver(W035NF, negativeRHS, coefmat0)
+
+# Determination of the coefficients of the fifth-order amplitude equation and the corresponding vectors that solve the fifth order system
     
 negativeRHS.actualcoord = Add(Mul(- 2, muNF, diffmatrix, W133NF.dummy),
                               Mul(muNF, diffmatrix, phiNF.dummy))
@@ -964,7 +993,7 @@ DS_phiW234_00 = second_order(0, 0, phiNF, W234NF)
 DS_W02W133_00 = second_order(0, 0, W02NF, W133NF)
 TS_phiphiW133_00 = third_order(0, 0, phiNF, phiNF, W133NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW034_00), Mul(2, DS_phiW234_00),
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW034_00, DS_phiW234_00)),
                               Mul(4, DS_W02W133_00), Mul(6, TS_phiphiW133_00),
                               Mul(4, muNF, diffmatrix, W123NF.dummy)).subs(extraparvals)
 
@@ -1070,22 +1099,22 @@ TS_phiphiphi_02 = third_order(0, 2, phiNF, phiNF, phiNF)
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W124_10), Mul(bNF[1], SS_W124_01),
                               Mul(aNF[2], SS_W123_10), Mul(bNF[2], SS_W123_01),
                               Mul(Pow(aNF[1], 2), SS_W123_20), Mul(aNF[1], bNF[1], SS_W123_11),
-                              Mul(Pow(bNF[1], 2), SS_W123_02), Mul(4, DS_phiW04_00),
-                              Mul(2, DS_phiW24_00), Mul(4, DS_W12W03_00),
-                              Mul(2, DS_W12W23_00), Mul(4, DS_W13W02_00),
-                              Mul(2, DS_W13W22_00), Mul(4, aNF[1], DS_phiW03_10),
-                              Mul(2, aNF[1], DS_phiW23_10), Mul(4, bNF[1], DS_phiW03_01),
-                              Mul(2, bNF[1], DS_phiW23_01), Mul(4, aNF[1], DS_W12W02_10),
-                              Mul(2, aNF[1], DS_W12W22_10), Mul(4, bNF[1], DS_W12W02_01),
-                              Mul(2, bNF[1], DS_W12W22_01), Mul(4, aNF[2], DS_phiW02_10),
-                              Mul(2, aNF[2], DS_phiW22_10), Mul(4, bNF[2], DS_phiW02_01),
-                              Mul(2, bNF[2], DS_phiW22_01), Mul(4, Pow(aNF[1], 2), DS_phiW02_20),
-                              Mul(2, Pow(aNF[1], 2), DS_phiW22_20), Mul(4, aNF[1], bNF[1], DS_phiW02_11),
-                              Mul(2, aNF[1], bNF[1], DS_phiW22_11), Mul(4, Pow(bNF[1], 2), DS_phiW02_02),
-                              Mul(2, Pow(bNF[1], 2), DS_phiW22_02), Mul(9, TS_phiphiW13_00),
-                              Mul(9, TS_phiW12W12_00), Mul(9, aNF[1], TS_phiphiW12_10),
-                              Mul(9, bNF[1], TS_phiphiW12_01), Mul(3, aNF[2], TS_phiphiphi_10),
-                              Mul(3, bNF[2], TS_phiphiphi_01), Mul(3, Pow(aNF[1], 2), TS_phiphiphi_20),
+                              Mul(Pow(bNF[1], 2), SS_W123_02), Mul(2, Add(Mul(2, DS_phiW04_00), DS_phiW24_00)),
+                              Mul(2, Add(Mul(2, DS_W12W03_00), DS_W12W23_00)),
+                              Mul(2, Add(Mul(2, DS_W13W02_00), DS_W13W22_00)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_phiW03_10), DS_phiW23_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_phiW03_01), DS_phiW23_01)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_W12W02_10), DS_W12W22_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_W12W02_01), DS_W12W22_01)),
+                              Mul(2, aNF[2], Add(Mul(2, DS_phiW02_10), DS_phiW22_10)),
+                              Mul(2, bNF[2], Add(Mul(2, DS_phiW02_01), DS_phiW22_01)),
+                              Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_phiW02_20), DS_phiW22_20)),
+                              Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_phiW02_11), DS_phiW22_11)),
+                              Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_phiW02_02), DS_phiW22_02)),
+                              Mul(9, TS_phiphiW13_00), Mul(9, TS_phiW12W12_00),
+                              Mul(9, aNF[1], TS_phiphiW12_10), Mul(9, bNF[1], TS_phiphiW12_01),
+                              Mul(3, aNF[2], TS_phiphiphi_10), Mul(3, bNF[2], TS_phiphiphi_01),
+                              Mul(3, Pow(aNF[1], 2), TS_phiphiphi_20),
                               Mul(3, aNF[1], bNF[1], TS_phiphiphi_11),
                               Mul(3, Pow(bNF[1], 2), TS_phiphiphi_02)).subs(extraparvals)
 
@@ -1110,13 +1139,12 @@ Q4S_phiphiphiW02_00 = fourth_order(0, 0, phiNF, phiNF, phiNF, W02NF)
 Q4S_phiphiphiW22_00 = fourth_order(0, 0, phiNF, phiNF, phiNF, W22NF)
 Q5S_phiphiphiphiphi_00 = fifth_order(0, 0, phiNF, phiNF, phiNF, phiNF, phiNF)
 
-negativeRHS.actualcoord = Add(Mul(4, DS_phiW024_00), Mul(2, DS_phiW224_00),
-                              Mul(2, DS_W22W33_00), Mul(4, DS_W123W02_00),
-                              Mul(2, DS_W123W22_00), Mul(9, TS_phiphiW123_00),
-                              Mul(3, TS_phiphiW33_00), Mul(12, TS_phiW02W02_00),
-                              Mul(12, TS_phiW22W02_00), Mul(6, TS_phiW22W22_00),
-                              Mul(24, Q4S_phiphiphiW02_00), Mul(16, Q4S_phiphiphiW22_00),
-                              Mul(10, Q5S_phiphiphiphiphi_00)).subs(extraparvals)
+negativeRHS.actualcoord = Add(Mul(2, Add(Mul(2, DS_phiW024_00), DS_phiW224_00)),
+                              Mul(2, DS_W22W33_00), Mul(2, Add(Mul(2, DS_W123W02_00), DS_W123W22_00)),
+                              Mul(3, Add(Mul(3, TS_phiphiW123_00), TS_phiphiW33_00)),
+                              Mul(12, TS_phiW02W02_00), Mul(6, Add(Mul(2, TS_phiW22W02_00), TS_phiW22W22_00)),
+                              Mul(8, Add(Mul(3, Q4S_phiphiphiW02_00), Mul(2, Q4S_phiphiphiW22_00))),
+                              Mul(10, Q5S_phiphiphiphiphi_00))
 
 alpha7 = psiNF.dummy.dot(negativeRHS.actualcoord)
 
@@ -1173,16 +1201,15 @@ DS_W02W22_10 = second_order(1, 0, W02NF, W22NF)
 DS_W02W22_01 = second_order(0, 1, W02NF, W22NF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W224_10), Mul(bNF[1], SS_W224_01),
-                              Mul(2, DS_phiW124_00), Mul(2, DS_phiW34_00),
-                              Mul(4, DS_W02W23_00), Mul(2, DS_W12W123_00),
-                              Mul(2, DS_W12W33_00), Mul(4, DS_W22W03_00),
-                              Mul(2, aNF[1], DS_phiW123_10), Mul(2, aNF[1], DS_phiW33_10),
-                              Mul(2, bNF[1], DS_phiW123_01), Mul(2, bNF[1], DS_phiW33_01),
+                              Mul(2, Add(DS_phiW124_00, DS_phiW34_00)),
+                              Mul(4, DS_W02W23_00), Mul(2, Add(DS_W12W123_00, DS_W12W33_00)),
+                              Mul(4, DS_W22W03_00), Mul(2, aNF[1], Add(DS_phiW123_10, DS_phiW33_10)),
+                              Mul(2, bNF[1], Add(DS_phiW123_01, DS_phiW33_01)),
                               Mul(4, aNF[1], DS_W02W22_10), Mul(4, bNF[1], DS_W02W22_01),
-                              Mul(6, TS_phiphiW03_00), Mul(6, TS_phiphiW23_00),
-                              Mul(12, TS_phiW12W02_00), Mul(12, TS_phiW12W22_00),
-                              Mul(6, aNF[1], TS_phiphiW02_10), Mul(6, aNF[1], TS_phiphiW22_10),
-                              Mul(6, bNF[1], TS_phiphiW02_01), Mul(6, bNF[1], TS_phiphiW22_01),
+                              Mul(6, Add(TS_phiphiW03_00, TS_phiphiW23_00)),
+                              Mul(12, Add(TS_phiW12W02_00, TS_phiW12W22_00)),
+                              Mul(6, aNF[1], Add(TS_phiphiW02_10, TS_phiphiW22_10)),
+                              Mul(6, bNF[1], Add(TS_phiphiW02_01, TS_phiphiW22_01)),
                               Mul(16, Q4S_phiphiphiW12_00), Mul(4, aNF[1], Q4S_phiphiphiphi_10),
                               Mul(4, bNF[1], Q4S_phiphiphiphi_01)).subs(extraparvals)
 
@@ -1228,11 +1255,11 @@ DS_phiW44_00 = second_order(0, 0, phiNF, W44NF)
 DS_W02W33_00 = second_order(0, 0, W02NF, W33NF)
 DS_W22W123_00 = second_order(0, 0, W22NF, W123NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW224_00), Mul(2, DS_phiW44_00),
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW224_00, DS_phiW44_00)),
                               Mul(4, DS_W02W33_00), Mul(2, DS_W22W123_00),
-                              Mul(3, TS_phiphiW123_00), Mul(6, TS_phiphiW33_00),
-                              Mul(12, TS_phiW22W02_00), Mul(3, TS_phiW22W22_00),
-                              Mul(8, Q4S_phiphiphiW02_00), Mul(12, Q4S_phiphiphiW22_00),
+                              Mul(3, Add(TS_phiphiW123_00, Mul(2, TS_phiphiW33_00))),
+                              Mul(3, Add(Mul(4, TS_phiW22W02_00), TS_phiW22W22_00)),
+                              Mul(4, Add(Mul(2, Q4S_phiphiphiW02_00), Mul(3, Q4S_phiphiphiW22_00))),
                               Mul(5, Q5S_phiphiphiphiphi_00)).subs(extraparvals)
 
 W325NF = linearsolver(W325NF, negativeRHS, coefmat3)
@@ -1433,19 +1460,19 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W025_10), Mul(bNF[1], SS_W025_01),
                               Mul(2, Pow(aNF[1], 2), DS_W02W02_20), Mul(2, aNF[1], bNF[1], DS_W02W02_11),
                               Mul(2, Pow(bNF[1], 2), DS_W02W02_02), Mul(Pow(aNF[1], 2), DS_W22W22_20),
                               Mul(aNF[1], bNF[1], DS_W22W22_11), Mul(Pow(bNF[1], 2), DS_W22W22_02),
-                              Mul(6, TS_phiphiW04_00), Mul(3, TS_phiphiW24_00),
-                              Mul(12, TS_phiW12W03_00), Mul(6, TS_phiW12W23_00),
-                              Mul(12, TS_phiW13W02_00), Mul(6, TS_phiW13W22_00),
-                              Mul(6, TS_W12W12W02_00), Mul(3, TS_W12W12W22_00),
-                              Mul(6, aNF[1], TS_phiphiW03_10), Mul(3, aNF[1], TS_phiphiW23_10),
-                              Mul(6, bNF[1], TS_phiphiW03_01), Mul(3, bNF[1], TS_phiphiW23_01),
-                              Mul(12, aNF[1], TS_phiW12W02_10), Mul(6, aNF[1], TS_phiW12W22_10),
-                              Mul(12, bNF[1], TS_phiW12W02_01), Mul(6, bNF[1], TS_phiW12W22_01),
-                              Mul(6, aNF[2], TS_phiphiW02_10), Mul(3, aNF[2], TS_phiphiW22_10),
-                              Mul(6, bNF[2], TS_phiphiW02_01), Mul(3, bNF[2], TS_phiphiW22_01),
-                              Mul(6, Pow(aNF[1], 2), TS_phiphiW02_20), Mul(3, Pow(aNF[1], 2), TS_phiphiW22_20),
-                              Mul(6, aNF[1], bNF[1], TS_phiphiW02_11), Mul(3, aNF[1], bNF[1], TS_phiphiW22_11),
-                              Mul(6, Pow(bNF[1], 2), TS_phiphiW02_02), Mul(3, Pow(bNF[1], 2), TS_phiphiW22_02),
+                              Mul(3, Add(Mul(2, TS_phiphiW04_00), TS_phiphiW24_00)),
+                              Mul(6, Add(Mul(2, TS_phiW12W03_00), TS_phiW12W23_00)),
+                              Mul(6, Add(Mul(2, TS_phiW13W02_00), TS_phiW13W22_00)),
+                              Mul(3, Add(Mul(2, TS_W12W12W02_00), TS_W12W12W22_00)),
+                              Mul(3, aNF[1], Add(Mul(2, TS_phiphiW03_10), TS_phiphiW23_10)),
+                              Mul(3, bNF[1], Add(Mul(2, TS_phiphiW03_01), TS_phiphiW23_01)),
+                              Mul(6, aNF[1], Add(Mul(2, TS_phiW12W02_10), TS_phiW12W22_10)),
+                              Mul(6, bNF[1], Add(Mul(2, TS_phiW12W02_01), TS_phiW12W22_01)),
+                              Mul(3, aNF[2], Add(Mul(2, TS_phiphiW02_10), TS_phiphiW22_10)),
+                              Mul(3, aNF[2], Add(Mul(2, TS_phiphiW02_01), TS_phiphiW22_01)),
+                              Mul(3, Pow(aNF[1], 2), Add(Mul(2, TS_phiphiW02_20), TS_phiphiW22_20)),
+                              Mul(3, aNF[1], bNF[1], Add(Mul(2, TS_phiphiW02_11), TS_phiphiW22_11)),
+                              Mul(3, Pow(bNF[1], 2), Add(Mul(2, TS_phiphiW02_02), TS_phiphiW22_02)),
                               Mul(12, Q4S_phiphiphiW13_00), Mul(18, Q4S_phiphiW12W12_00),
                               Mul(12, aNF[1], Q4S_phiphiphiW12_10), Mul(12, bNF[1], Q4S_phiphiphiW12_01),
                               Mul(3, aNF[2], Q4S_phiphiphiphi_10), Mul(3, bNF[2], Q4S_phiphiphiphi_01),
@@ -1478,14 +1505,13 @@ S6S_phiphiphiphiphiphi_00 = sixth_order(0, 0, phiNF, phiNF, phiNF, phiNF, phiNF,
 
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW175_00), Mul(4, DS_W02W024_00),
                               Mul(2, DS_W22W224_00), DS_W123W123_00,
-                              DS_W33W33_00, Mul(6, TS_phiphiW024_00),
-                              Mul(3, TS_phiphiW224_00), Mul(6, TS_phiW22W33_00),
-                              Mul(12, TS_phiW123W02_00), Mul(6, TS_phiW123W22_00),
+                              DS_W33W33_00, Mul(3, Add(Mul(2, TS_phiphiW024_00), TS_phiphiW224_00)),
+                              Mul(6, TS_phiW22W33_00), Mul(6, Add(Mul(2, TS_phiW123W02_00), TS_phiW123W22_00)),
                               Mul(4, TS_W02W02W02_00), Mul(6, TS_W02W22W22_00),
-                              Mul(12, Q4S_phiphiphiW123_00), Mul(4, Q4S_phiphiphiW33_00),
-                              Mul(24, Q4S_phiphiW02W02_00), Mul(24, Q4S_phiphiW22W02_00),
-                              Mul(12, Q4S_phiphiW22W22_00), Mul(30, Q5S_phiphiphiphiW02_00),
-                              Mul(20, Q5S_phiphiphiphiW22_00),
+                              Mul(4, Add(Mul(3, Q4S_phiphiphiW123_00), Q4S_phiphiphiW33_00)),
+                              Mul(24, Q4S_phiphiW02W02_00),
+                              Mul(12, Add(Mul(2, Q4S_phiphiW22W02_00), Q4S_phiphiW22W22_00)),
+                              Mul(10, Add(Mul(3, Q5S_phiphiphiphiW02_00), Mul(2, Q5S_phiphiphiphiW22_00))),
                               Mul(10, S6S_phiphiphiphiphiphi_00)).subs(extraparvals)
 
 W036NF = linearsolver(W036NF, negativeRHS, coefmat0)
@@ -1536,11 +1562,11 @@ TS_phiW133W02_00 = third_order(0, 0, phiNF, W133NF, W02NF)
 TS_phiW133W22_00 = third_order(0, 0, phiNF, W133NF, W22NF)
 Q4S_phiphiphiW133_00 = fourth_order(0, 0, phiNF, phiNF, phiNF, W133NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW135_00), Mul(- 2, DS_phiW145_00),
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW135_00, - DS_phiW145_00)),
                               Mul(4, DS_W02W034_00), Mul(2, DS_W22W234_00),
-                              Mul(2, DS_W123W133_00), Mul(6, TS_phiphiW034_00),
-                              Mul(3, TS_phiphiW234_00), Mul(12, TS_phiW133W02_00),
-                              Mul(6, TS_phiW133W22_00), Mul(12, Q4S_phiphiphiW133_00)).subs(extraparvals)
+                              Mul(2, DS_W123W133_00), Mul(3, Add(Mul(2, TS_phiphiW034_00), TS_phiphiW234_00)),
+                              Mul(6, Add(Mul(2, TS_phiW133W02_00), TS_phiW133W22_00)),
+                              Mul(12, Q4S_phiphiphiW133_00)).subs(extraparvals)
 
 W066NF = linearsolver(W066NF, negativeRHS, coefmat0)
 
@@ -1549,6 +1575,8 @@ DS_phiW15_00 = second_order(0, 0, phiNF, W15NF)
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW15_00), Mul(2, muNF, diffmatrix, W02NF.dummy))
 
 W076NF = linearsolver(W076NF, negativeRHS, coefmat0)
+
+# Determination of the coefficients of the sixth-order amplitude equation and the corresponding vectors that solve the sixth order system
 
 SS_W15_10 = first_order(1, 0, W15NF)
 SS_W15_01 = first_order(0, 1, W15NF)
@@ -1613,11 +1641,10 @@ TS_phiphiW133_10 = third_order(1, 0, phiNF, phiNF, W133NF)
 TS_phiphiW133_01 = third_order(0, 1, phiNF, phiNF, W133NF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W135_10), Mul(bNF[1], SS_W135_01),
-                              Mul(2, DS_phiW035_00), Mul(2, DS_phiW235_00),
-                              Mul(4, DS_W02W134_00), Mul(2, DS_W12W034_00),
-                              Mul(2, DS_W12W234_00), Mul(4, DS_W03W133_00),
-                              Mul(2, aNF[1], DS_phiW034_10), Mul(2, aNF[1], DS_phiW234_10),
-                              Mul(2, bNF[1], DS_phiW034_01), Mul(2, bNF[1], DS_phiW234_01),
+                              Mul(2, Add(DS_phiW035_00, DS_phiW235_00)),
+                              Mul(4, DS_W02W134_00), Mul(2, Add(DS_W12W034_00, DS_W12W234_00)),
+                              Mul(4, DS_W03W133_00), Mul(2, aNF[1], Add(DS_phiW034_10, DS_phiW234_10)),
+                              Mul(2, bNF[1], Add(DS_phiW034_01, DS_phiW234_01)),
                               Mul(4, aNF[1], DS_W02W133_10), Mul(4, bNF[1], DS_W02W133_01),
                               Mul(6, TS_phiphiW134_00), Mul(12, TS_phiW12W133_00),
                               Mul(6, aNF[1], TS_phiphiW133_10), Mul(6, bNF[1], TS_phiphiW133_01),
@@ -1633,13 +1660,13 @@ W136NF = critical_linearsolver(W136NF, negativeRHS, criticalcol, coefsubmatrix, 
 SS_W145_10 = first_order(1, 0, W145NF)
 SS_W145_01 = first_order(0, 1, W145NF)
 DS_W22W134_00 = second_order(0, 0, W22NF, W134NF)
-DS_W23W133_00 = second_order(0, 0, W23NF, W133NF)
+DS_W133W23_00 = second_order(0, 0, W133NF, W23NF)
 DS_W22W133_10 = second_order(1, 0, W22NF, W133NF)
 DS_W22W133_01 = second_order(0, 1, W22NF, W133NF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W145_10), Mul(bNF[1], SS_W145_01),
                               Mul(- 2, DS_phiW035_00), Mul(- 2, DS_W12W034_00),
-                              Mul(- 2, DS_W22W134_00), Mul(- 2, DS_W23W133_00),
+                              Mul(- 2, DS_W22W134_00), Mul(- 2, DS_W133W23_00),
                               Mul(- 2, aNF[1], DS_phiW034_10), Mul(- 2, bNF[1], DS_phiW034_01),
                               Mul(- 2, aNF[1], DS_W22W133_10), Mul(- 2, bNF[1], DS_W22W133_01),
                               Mul(- 3, TS_phiphiW134_00), Mul(- 6, TS_phiW12W133_00),
@@ -1810,56 +1837,43 @@ negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W165_10), Mul(bNF[1], SS_W165_01),
                               Mul(2, bNF[1], bNF[2], SS_W123_02), Mul(Pow(aNF[1], 3), SS_W123_30),
                               Mul(Pow(aNF[1], 2), bNF[1], SS_W123_21),
                               Mul(aNF[1], Pow(bNF[1], 2), SS_W123_12),
-                              Mul(Pow(bNF[1], 3), SS_W123_03), Mul(4, DS_phiW05_00),
-                              Mul(2, DS_phiW25_00), Mul(4, DS_W12W04_00),
-                              Mul(2, DS_W12W24_00), Mul(4, DS_W13W03_00),
-                              Mul(2, DS_W13W23_00), Mul(4, DS_W14W02_00),
-                              Mul(2, DS_W14W22_00), Mul(4, aNF[1], DS_phiW04_10),
-                              Mul(2, aNF[1], DS_phiW24_10), Mul(4, bNF[1], DS_phiW04_01),
-                              Mul(2, bNF[1], DS_phiW24_01), Mul(4, aNF[1], DS_W12W03_10),
-                              Mul(2, aNF[1], DS_W12W23_10), Mul(4, bNF[1], DS_W12W03_01),
-                              Mul(2, bNF[1], DS_W12W23_01), Mul(4, aNF[1], DS_W13W02_10),
-                              Mul(2, aNF[1], DS_W13W22_10), Mul(4, bNF[1], DS_W13W02_01),
-                              Mul(2, bNF[1], DS_W13W22_01), Mul(4, aNF[2], DS_phiW03_10),
-                              Mul(2, aNF[2], DS_phiW23_10), Mul(4, bNF[2], DS_phiW03_01),
-                              Mul(2, bNF[2], DS_phiW23_01), Mul(4, aNF[2], DS_W12W02_10),
-                              Mul(2, aNF[2], DS_W12W22_10), Mul(4, bNF[2], DS_W12W02_01),
-                              Mul(2, bNF[2], DS_W12W22_01), Mul(4, aNF[3], DS_phiW02_10),
-                              Mul(2, aNF[3], DS_phiW22_10), Mul(4, bNF[3], DS_phiW02_01),
-                              Mul(2, bNF[3], DS_phiW22_01), Mul(4, Pow(aNF[1], 2), DS_phiW03_20),
-                              Mul(2, Pow(aNF[1], 2), DS_phiW23_20),
-                              Mul(4, aNF[1], bNF[1], DS_phiW03_11),
-                              Mul(2, aNF[1], bNF[1], DS_phiW23_11),
-                              Mul(4, Pow(bNF[1], 2), DS_phiW03_02),
-                              Mul(2, Pow(bNF[1], 2), DS_phiW23_02),
-                              Mul(4, Pow(aNF[1], 2), DS_W12W02_20),
-                              Mul(2, Pow(aNF[1], 2), DS_W12W22_20),
-                              Mul(4, aNF[1], bNF[1], DS_W12W02_11),
-                              Mul(2, aNF[1], bNF[1], DS_W12W22_11),
-                              Mul(4, Pow(bNF[1], 2), DS_W12W02_02),
-                              Mul(2, Pow(bNF[1], 2), DS_W12W22_02),
-                              Mul(8, aNF[1], aNF[2], DS_phiW02_20),
-                              Mul(4, aNF[1], aNF[2], DS_phiW22_20),
-                              Mul(4, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_phiW02_11),
-                              Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_phiW22_11),
-                              Mul(8, bNF[1], bNF[2], DS_phiW02_02),
-                              Mul(4, bNF[1], bNF[2], DS_phiW22_02),
-                              Mul(4, Pow(aNF[1], 3), DS_phiW02_30),
-                              Mul(2, Pow(aNF[1], 3), DS_phiW22_30),
-                              Mul(4, Pow(aNF[1], 2), bNF[1], DS_phiW02_21),
-                              Mul(2, Pow(aNF[1], 2), bNF[1], DS_phiW22_21),
-                              Mul(4, aNF[1], Pow(bNF[1], 2), DS_phiW02_12),
-                              Mul(2, aNF[1], Pow(bNF[1], 2), DS_phiW22_12),
-                              Mul(4, Pow(bNF[1], 3), DS_phiW02_03),
-                              Mul(2, Pow(bNF[1], 3), DS_phiW22_03), Mul(9, TS_phiphiW14_00),
-                              Mul(18, TS_phiW12W13_00), Mul(3, TS_W12W12W12_00),
-                              Mul(9, aNF[1], TS_phiphiW13_10), Mul(9, bNF[1], TS_phiphiW13_01),
-                              Mul(9, aNF[1], TS_phiW12W12_10), Mul(9, bNF[1], TS_phiW12W12_01),
-                              Mul(9, aNF[2], TS_phiphiW12_10), Mul(9, bNF[2], TS_phiphiW12_01),
-                              Mul(3, aNF[3], TS_phiphiphi_10), Mul(3, bNF[3], TS_phiphiphi_01),
-                              Mul(9, Pow(aNF[1], 2), TS_phiphiW12_20),
-                              Mul(9, aNF[1], bNF[1], TS_phiphiW12_11),
-                              Mul(9, Pow(bNF[1], 2), TS_phiphiW12_02),
+                              Mul(Pow(bNF[1], 3), SS_W123_03), Mul(2, Add(Mul(2, DS_phiW05_00), DS_phiW25_00)),
+                              Mul(2, Add(Mul(2, DS_W12W04_00), DS_W12W24_00)),
+                              Mul(2, Add(Mul(2, DS_W13W03_00), DS_W13W23_00)),
+                              Mul(2, Add(Mul(2, DS_W14W02_00), DS_W14W22_00)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_phiW04_10), DS_phiW24_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_phiW04_01), DS_phiW24_01)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_W12W03_10), DS_W12W23_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_W12W03_01), DS_W12W23_01)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_W13W02_10), DS_W13W22_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_W13W02_01), DS_W13W22_01)),
+                              Mul(2, aNF[2], Add(Mul(2, DS_phiW03_10), DS_phiW23_10)),
+                              Mul(2, bNF[2], Add(Mul(2, DS_phiW03_01), DS_phiW23_01)),
+                              Mul(2, aNF[2], Add(Mul(2, DS_W12W02_10), DS_W12W22_10)),
+                              Mul(2, bNF[2], Add(Mul(2, DS_W12W02_01), DS_W12W22_01)),
+                              Mul(2, aNF[3], Add(Mul(2, DS_phiW02_10), DS_phiW22_10)),
+                              Mul(2, bNF[3], Add(Mul(2, DS_phiW02_01), DS_phiW22_01)),
+                              Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_phiW03_20), DS_phiW23_20)),
+                              Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_phiW03_11), DS_phiW23_11)),
+                              Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_phiW03_02), DS_phiW23_02)),
+                              Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_W12W02_20), DS_W12W22_20)),
+                              Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_W12W02_11), DS_W12W22_11)),
+                              Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_W12W02_02), DS_W12W22_02)),
+                              Mul(4, aNF[1], aNF[2], Add(Mul(2, DS_phiW02_20), DS_phiW22_20)),
+                              Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])),
+                                  Add(Mul(2, DS_phiW02_11), DS_phiW22_11)),
+                              Mul(4, bNF[1], bNF[2], Add(Mul(2, DS_phiW02_02), DS_phiW22_02)),
+                              Mul(2, Pow(aNF[1], 3), Add(Mul(2, DS_phiW02_30), DS_phiW22_30)),
+                              Mul(2, Pow(aNF[1], 2), bNF[1], Add(Mul(2, DS_phiW02_21), DS_phiW22_21)),
+                              Mul(2, aNF[1], Pow(bNF[1], 2), Add(Mul(2, DS_phiW02_12), DS_phiW22_12)),
+                              Mul(2, Pow(bNF[1], 3), Add(Mul(2, DS_phiW02_03), DS_phiW22_03)),
+                              Mul(9, TS_phiphiW14_00), Mul(18, TS_phiW12W13_00),
+                              Mul(3, TS_W12W12W12_00), Mul(9, aNF[1], TS_phiphiW13_10),
+                              Mul(9, bNF[1], TS_phiphiW13_01), Mul(9, aNF[1], TS_phiW12W12_10),
+                              Mul(9, bNF[1], TS_phiW12W12_01), Mul(9, aNF[2], TS_phiphiW12_10),
+                              Mul(9, bNF[2], TS_phiphiW12_01), Mul(3, aNF[3], TS_phiphiphi_10),
+                              Mul(3, bNF[3], TS_phiphiphi_01), Mul(9, Pow(aNF[1], 2), TS_phiphiW12_20),
+                              Mul(9, aNF[1], bNF[1], TS_phiphiW12_11), Mul(9, Pow(bNF[1], 2), TS_phiphiW12_02),
                               Mul(6, aNF[1], aNF[2], TS_phiphiphi_20),
                               Mul(3, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), TS_phiphiphi_11),
                               Mul(6, bNF[1], bNF[2], TS_phiphiphi_02),
@@ -1905,8 +1919,8 @@ TS_phiW03W02_00 = third_order(0, 0, phiNF, W03NF, W02NF)
 TS_phiW03W22_00 = third_order(0, 0, phiNF, W03NF, W22NF)
 TS_phiW23W02_00 = third_order(0, 0, phiNF, W23NF, W02NF)
 TS_phiW23W22_00 = third_order(0, 0, phiNF, W23NF, W22NF)
-TS_W12W02W02_00 = third_order(0, 0, W12NF, W02NF, W02NF)
-TS_W12W02W22_00 = third_order(0, 0, W12NF, W02NF, W22NF)
+TS_W02W12W02_00 = third_order(0, 0, W02NF, W12NF, W02NF)
+TS_W02W12W22_00 = third_order(0, 0, W02NF, W12NF, W22NF)
 TS_W12W22W22_00 = third_order(0, 0, W12NF, W22NF, W22NF)
 TS_phiphiW123_10 = third_order(1, 0, phiNF, phiNF, W123NF)
 TS_phiphiW33_10 = third_order(1, 0, phiNF, phiNF, W33NF)
@@ -1931,33 +1945,31 @@ Q5S_phiphiphiphiphi_10 = fifth_order(1, 0, phiNF, phiNF, phiNF, phiNF, phiNF)
 Q5S_phiphiphiphiphi_01 = fifth_order(0, 1, phiNF, phiNF, phiNF, phiNF, phiNF)
 
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W175_10), Mul(bNF[1], SS_W175_01),
-                              Mul(4, DS_phiW025_00), Mul(2, DS_phiW225_00),
-                              Mul(4, DS_W12W024_00), Mul(2, DS_W12W224_00),
-                              Mul(2, DS_W22W34_00), Mul(4, DS_W123W03_00),
-                              Mul(2, DS_W123W23_00), Mul(2, DS_W23W33_00),
-                              Mul(4, DS_W124W02_00), Mul(2, DS_W124W22_00),
-                              Mul(4, aNF[1], DS_phiW024_10), Mul(2, aNF[1], DS_phiW224_10),
-                              Mul(4, bNF[1], DS_phiW024_01), Mul(2, bNF[1], DS_phiW224_01),
+                              Mul(2, Add(Mul(2, DS_phiW025_00), DS_phiW225_00)),
+                              Mul(2, Add(Mul(2, DS_W12W024_00), DS_W12W224_00)),
+                              Mul(2, DS_W22W34_00), Mul(2, Add(Mul(2, DS_W123W03_00), DS_W123W23_00)),
+                              Mul(2, DS_W23W33_00), Mul(2, Add(Mul(2, DS_W124W02_00), DS_W124W22_00)),
+                              Mul(2, aNF[1], Add(Mul(2, DS_phiW024_10), DS_phiW224_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_phiW024_01), DS_phiW224_01)),
                               Mul(2, aNF[1], DS_W22W33_10), Mul(2, bNF[1], DS_W22W33_01),
-                              Mul(4, aNF[1], DS_W123W02_10), Mul(2, aNF[1], DS_W123W22_10),
-                              Mul(4, bNF[1], DS_W123W02_01), Mul(2, bNF[1], DS_W123W22_01),
-                              Mul(9, TS_phiphiW124_00), Mul(3, TS_phiphiW34_00),
-                              Mul(18, TS_phiW12W123_00), Mul(6, TS_phiW12W33_00),
-                              Mul(24, TS_phiW03W02_00), Mul(12, TS_phiW03W22_00),
-                              Mul(12, TS_phiW23W02_00), Mul(12, TS_phiW23W22_00),
-                              Mul(12, TS_W12W02W02_00), Mul(12, TS_W12W02W22_00),
-                              Mul(6, TS_W12W22W22_00), Mul(9, aNF[1], TS_phiphiW123_10),
-                              Mul(3, aNF[1], TS_phiphiW33_10), Mul(9, bNF[1], TS_phiphiW123_01),
-                              Mul(3, bNF[1], TS_phiphiW33_01), Mul(12, aNF[1], TS_phiW02W02_10),
-                              Mul(12, bNF[1], TS_phiW02W02_01), Mul(12, aNF[1], TS_phiW22W02_10),
-                              Mul(6, aNF[1], TS_phiW22W22_10), Mul(12, bNF[1], TS_phiW22W02_01),
-                              Mul(6, bNF[1], TS_phiW22W22_01), Mul(24, Q4S_phiphiphiW03_00),
-                              Mul(16, Q4S_phiphiphiW23_00), Mul(72, Q4S_phiphiW12W02_00),
-                              Mul(48, Q4S_phiphiW12W22_00), Mul(24, aNF[1], Q4S_phiphiphiW02_10),
-                              Mul(16, aNF[1], Q4S_phiphiphiW22_10),
-                              Mul(24, bNF[1], Q4S_phiphiphiW02_01),
-                              Mul(16, bNF[1], Q4S_phiphiphiW22_01), Mul(50, Q5S_phiphiphiphiW12_00),
-                              Mul(10, aNF[1], Q5S_phiphiphiphiphi_10),
+                              Mul(2, aNF[1], Add(Mul(2, DS_W123W02_10), DS_W123W22_10)),
+                              Mul(2, bNF[1], Add(Mul(2, DS_W123W02_01), DS_W123W22_01)),
+                              Mul(3, Add(Mul(3, TS_phiphiW124_00), TS_phiphiW34_00)),
+                              Mul(6, Add(Mul(3, TS_phiW12W123_00), TS_phiW12W33_00)),
+                              Mul(12, Add(Mul(2, TS_phiW03W02_00), TS_phiW03W22_00)),
+                              Mul(12, Add(TS_phiW23W02_00, TS_phiW23W22_00)),
+                              Mul(12, Add(TS_W02W12W02_00, TS_W02W12W22_00)),
+                              Mul(6, TS_W12W22W22_00),
+                              Mul(3, aNF[1], Add(Mul(3, TS_phiphiW123_10), TS_phiphiW33_10)),
+                              Mul(3, bNF[1], Add(Mul(3, TS_phiphiW123_01), TS_phiphiW33_01)),
+                              Mul(12, aNF[1], TS_phiW02W02_10), Mul(12, bNF[1], TS_phiW02W02_01),
+                              Mul(6, aNF[1], Add(Mul(2, TS_phiW22W02_10), TS_phiW22W22_10)),
+                              Mul(6, bNF[1], Add(Mul(2, TS_phiW22W02_01), TS_phiW22W22_01)),
+                              Mul(8, Add(Mul(3, Q4S_phiphiphiW03_00), Mul(2, Q4S_phiphiphiW23_00))),
+                              Mul(24, Add(Mul(3, Q4S_phiphiW12W02_00), Mul(2, Q4S_phiphiW12W22_00))),
+                              Mul(8, aNF[1], Add(Mul(3, Q4S_phiphiphiW02_10), Mul(2, Q4S_phiphiphiW22_10))),
+                              Mul(8, bNF[1], Add(Mul(3, Q4S_phiphiphiW02_01), Mul(2, Q4S_phiphiphiW22_01))),
+                              Mul(50, Q5S_phiphiphiphiW12_00), Mul(10, aNF[1], Q5S_phiphiphiphiphi_10),
                               Mul(10, bNF[1], Q5S_phiphiphiphiphi_01)).subs(extraparvals)
 
 alpha72 = psiNF.dummy.dot(negativeRHS.actualcoord)
@@ -2071,42 +2083,40 @@ TS_phiW13W22_00 = third_order(0, 0, phiNF, W13NF, W22NF)
 negativeRHS.actualcoord = Add(Mul(aNF[1], SS_W225_10), Mul(bNF[1], SS_W225_01),
                               Mul(aNF[2], SS_W224_10), Mul(bNF[2], SS_W224_01),
                               Mul(Pow(aNF[1], 2), SS_W224_20), Mul(aNF[1], bNF[1], SS_W224_11),
-                              Mul(Pow(bNF[1], 2), SS_W224_02), Mul(2, DS_phiW165_00),
-                              Mul(2, DS_phiW35_00), Mul(4, DS_W02W24_00),
-                              Mul(2, DS_W12W124_00), Mul(2, DS_W12W34_00),
+                              Mul(Pow(bNF[1], 2), SS_W224_02), Mul(2, Add(DS_phiW165_00, DS_phiW35_00)),
+                              Mul(4, DS_W02W24_00), Mul(2, Add(DS_W12W124_00, DS_W12W34_00)),
                               Mul(4, DS_W22W04_00), Mul(4, DS_W03W23_00),
-                              Mul(2, DS_W13W123_00), Mul(2, DS_W13W33_00),
-                              Mul(2, aNF[1], DS_phiW124_10), Mul(2, aNF[1], DS_phiW34_10),
-                              Mul(2, bNF[1], DS_phiW124_01), Mul(2, bNF[1], DS_phiW34_01),
+                              Mul(2, Add(DS_W13W123_00, DS_W13W33_00)),
+                              Mul(2, aNF[1], Add(DS_phiW124_10, DS_phiW34_10)),
+                              Mul(2, bNF[1], Add(DS_phiW124_01, DS_phiW34_01)),
                               Mul(4, aNF[1], DS_W02W23_10), Mul(4, bNF[1], DS_W02W23_01),
-                              Mul(2, aNF[1], DS_W12W123_10), Mul(2, aNF[1], DS_W12W33_10),
-                              Mul(2, bNF[1], DS_W12W123_01), Mul(2, bNF[1], DS_W12W33_01),
+                              Mul(2, aNF[1], Add(DS_W12W123_10, DS_W12W33_10)),
+                              Mul(2, bNF[1], Add(DS_W12W123_01, DS_W12W33_01)),
                               Mul(4, aNF[1], DS_W22W03_10), Mul(4, bNF[1], DS_W22W03_01),
-                              Mul(2, aNF[2], DS_phiW123_10), Mul(2, aNF[2], DS_phiW33_10),
-                              Mul(2, bNF[2], DS_phiW123_01), Mul(2, bNF[2], DS_phiW33_01),
+                              Mul(2, aNF[2], Add(DS_phiW123_10, DS_phiW33_10)),
+                              Mul(2, bNF[2], Add(DS_phiW123_01, DS_phiW33_01)),
                               Mul(4, aNF[2], DS_W02W22_10), Mul(4, bNF[2], DS_W02W22_01),
-                              Mul(2, Pow(aNF[1], 2), DS_phiW123_20), Mul(2, Pow(aNF[1], 2), DS_phiW33_20),
-                              Mul(2, aNF[1], bNF[1], DS_phiW123_11), Mul(2, aNF[1], bNF[1], DS_phiW33_11),
-                              Mul(2, Pow(bNF[1], 2), DS_phiW123_02), Mul(2, Pow(bNF[1], 2), DS_phiW33_02),
+                              Mul(2, Pow(aNF[1], 2), Add(DS_phiW123_20, DS_phiW33_20)),
+                              Mul(2, aNF[1], bNF[1], Add(DS_phiW123_11, DS_phiW33_11)),
+                              Mul(2, Pow(bNF[1], 2), Add(DS_phiW123_02, DS_phiW33_02)),
                               Mul(4, Pow(aNF[1], 2), DS_W02W22_20), Mul(4, aNF[1], bNF[1], DS_W02W22_11),
-                              Mul(4, Pow(bNF[1], 2), DS_W02W22_02), Mul(6, TS_phiphiW04_00),
-                              Mul(6, TS_phiphiW24_00), Mul(12, TS_phiW12W03_00),
-                              Mul(12, TS_phiW12W23_00), Mul(12, TS_phiW13W02_00),
-                              Mul(12, TS_phiW13W22_00), Mul(6, TS_W12W12W02_00),
-                              Mul(6, TS_W12W12W22_00), Mul(6, aNF[1], TS_phiphiW03_10),
-                              Mul(6, aNF[1], TS_phiphiW23_10), Mul(6, bNF[1], TS_phiphiW03_01),
-                              Mul(6, bNF[1], TS_phiphiW23_01), Mul(12, aNF[1], TS_phiW12W02_10),
-                              Mul(12, aNF[1], TS_phiW12W22_10), Mul(12, bNF[1], TS_phiW12W02_01),
-                              Mul(12, bNF[1], TS_phiW12W22_01), Mul(6, aNF[2], TS_phiphiW02_10),
-                              Mul(6, aNF[2], TS_phiphiW22_10), Mul(6, bNF[2], TS_phiphiW02_01),
-                              Mul(6, bNF[2], TS_phiphiW22_01), Mul(6, Pow(aNF[1], 2), TS_phiphiW02_20),
-                              Mul(6, Pow(aNF[1], 2), TS_phiphiW22_20), Mul(6, aNF[1], bNF[1], TS_phiphiW02_11),
-                              Mul(6, aNF[1], bNF[1], TS_phiphiW22_11), Mul(6, Pow(bNF[1], 2), TS_phiphiW02_02),
-                              Mul(6, Pow(bNF[1], 2), TS_phiphiW22_02), Mul(16, Q4S_phiphiphiW13_00),
-                              Mul(24, Q4S_phiphiW12W12_00), Mul(16, aNF[1], Q4S_phiphiphiW12_10),
-                              Mul(16, bNF[1], Q4S_phiphiphiW12_01), Mul(4, aNF[2], Q4S_phiphiphiphi_10),
-                              Mul(4, bNF[2], Q4S_phiphiphiphi_01), Mul(4, Pow(aNF[1], 2), Q4S_phiphiphiphi_20),
-                              Mul(4, aNF[1], bNF[1], Q4S_phiphiphiphi_11),
+                              Mul(4, Pow(bNF[1], 2), DS_W02W22_02), Mul(6, Add(TS_phiphiW04_00, TS_phiphiW24_00)),
+                              Mul(12, Add(TS_phiW12W03_00, TS_phiW12W23_00)),
+                              Mul(12, Add(TS_phiW13W02_00, TS_phiW13W22_00)),
+                              Mul(6, Add(TS_W12W12W02_00, TS_W12W12W22_00)),
+                              Mul(6, aNF[1], Add(TS_phiphiW03_10, TS_phiphiW23_10)),
+                              Mul(6, bNF[1], Add(TS_phiphiW03_01, TS_phiphiW23_01)),
+                              Mul(12, aNF[1], Add(TS_phiW12W02_10, TS_phiW12W22_10)),
+                              Mul(12, bNF[1], Add(TS_phiW12W02_01, TS_phiW12W22_01)),
+                              Mul(6, aNF[2], Add(TS_phiphiW02_10, TS_phiphiW22_10)),
+                              Mul(6, bNF[2], Add(TS_phiphiW02_01, TS_phiphiW22_01)),
+                              Mul(6, Pow(aNF[1], 2), Add(TS_phiphiW02_20, TS_phiphiW22_20)),
+                              Mul(6, aNF[1], bNF[1], Add(TS_phiphiW02_11, TS_phiphiW22_11)),
+                              Mul(6, Pow(bNF[1], 2), Add(TS_phiphiW02_02, TS_phiphiW22_02)),
+                              Mul(16, Q4S_phiphiphiW13_00), Mul(24, Q4S_phiphiW12W12_00),
+                              Mul(16, aNF[1], Q4S_phiphiphiW12_10), Mul(16, bNF[1], Q4S_phiphiphiW12_01),
+                              Mul(4, aNF[2], Q4S_phiphiphiphi_10), Mul(4, bNF[2], Q4S_phiphiphiphi_01),
+                              Mul(4, Pow(aNF[1], 2), Q4S_phiphiphiphi_20), Mul(4, aNF[1], bNF[1], Q4S_phiphiphiphi_11),
                               Mul(4, Pow(bNF[1], 2), Q4S_phiphiphiphi_02)).subs(extraparvals)
 
 W226NF = linearsolver(W226NF, negativeRHS, coefmat2)
@@ -2115,7 +2125,7 @@ DS_phiW325_00 = second_order(0, 0, phiNF, W325NF)
 DS_W02W224_00 = second_order(0, 0, W02NF, W224NF)
 DS_W22W024_00 = second_order(0, 0, W22NF, W024NF)
 DS_W22W44_00 = second_order(0, 0, W22NF, W44NF)
-DS_W133W33_00 = second_order(0, 0, W133NF, W33NF)
+DS_W123W33_00 = second_order(0, 0, W123NF, W33NF)
 TS_phiphiW44_00 = third_order(0, 0, phiNF, phiNF, W44NF)
 TS_phiW02W123_00 = third_order(0, 0, phiNF, W02NF, W123NF)
 TS_phiW02W33_00 = third_order(0, 0, phiNF, W02NF, W33NF)
@@ -2123,18 +2133,17 @@ TS_phiW22W123_00 = third_order(0, 0, phiNF, W22NF, W123NF)
 TS_W02W02W22_00 = third_order(0, 0, W02NF, W02NF, W22NF)
 TS_W22W22W22_00 = third_order(0, 0, W22NF, W22NF, W22NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW175_00), Mul(2, DS_phiW325_00),
-                              Mul(4, DS_W02W224_00), Mul(4, DS_W22W024_00),
-                              Mul(2, DS_W22W44_00), DS_W123W123_00,
-                              Mul(2, DS_W133W33_00), Mul(6, TS_phiphiW024_00),
-                              Mul(6, TS_phiphiW224_00), Mul(3, TS_phiphiW44_00),
-                              Mul(12, TS_phiW02W123_00), Mul(12, TS_phiW02W33_00),
-                              Mul(12, TS_phiW22W123_00), Mul(6, TS_phiW22W33_00),
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW175_00, DS_phiW325_00)),
+                              Mul(4, DS_W02W224_00), Mul(2, Add(Mul(2, DS_W22W024_00), DS_W22W44_00)),
+                              DS_W123W123_00, Mul(2, DS_W123W33_00),
+                              Mul(3, Add(Mul(2, TS_phiphiW024_00), Mul(2, TS_phiphiW224_00), TS_phiphiW44_00)),
+                              Mul(12, Add(TS_phiW02W123_00, TS_phiW02W33_00)),
+                              Mul(6, Add(Mul(2, TS_phiW22W123_00), TS_phiW22W33_00)),
                               Mul(12, TS_W02W02W22_00), Mul(3, TS_W22W22W22_00),
-                              Mul(16, Q4S_phiphiphiW123_00), Mul(12, Q4S_phiphiphiW33_00),
-                              Mul(24, Q4S_phiphiW02W02_00), Mul(48, Q4S_phiphiW22W02_00),
-                              Mul(18, Q4S_phiphiW22W22_00), Mul(40, Q5S_phiphiphiphiW02_00),
-                              Mul(35, Q5S_phiphiphiphiW22_00),
+                              Mul(4, Add(Mul(4, Q4S_phiphiphiW123_00), Mul(3, Q4S_phiphiphiW33_00))),
+                              Mul(24, Q4S_phiphiW02W02_00),
+                              Mul(6, Add(Mul(8, Q4S_phiphiW22W02_00), Mul(3, Q4S_phiphiW22W22_00))),
+                              Mul(5, Add(Mul(8, Q5S_phiphiphiphiW02_00), Mul(7, Q5S_phiphiphiphiW22_00))),
                               Mul(15, S6S_phiphiphiphiphiphi_00)).subs(extraparvals)
 
 W236NF = linearsolver(W236NF, negativeRHS, coefmat2)
@@ -2168,15 +2177,16 @@ DS_phiW335_00 = second_order(0, 0, phiNF, W335NF)
 DS_W02W234_00 = second_order(0, 0, W02NF, W234NF)
 DS_W22W034_00 = second_order(0, 0, W22NF, W034NF)
 
-negativeRHS.actualcoord = Add(Mul(2, DS_phiW135_00), Mul(2, DS_phiW335_00),
+negativeRHS.actualcoord = Add(Mul(2, Add(DS_phiW135_00, DS_phiW335_00)),
                               Mul(4, DS_W02W234_00), Mul(2, DS_W22W034_00),
-                              Mul(2, DS_W123W133_00), Mul(3, TS_phiphiW034_00),
-                              Mul(6, TS_phiphiW234_00), Mul(12, TS_phiW133W02_00),
-                              Mul(6, TS_phiW133W22_00), Mul(12, Q4S_phiphiphiW133_00),
+                              Mul(2, DS_W123W133_00), Mul(3, Add(TS_phiphiW034_00, Mul(2, TS_phiphiW234_00))),
+                              Mul(6, Add(Mul(2, TS_phiW133W02_00), TS_phiW133W22_00)),
+                              Mul(12, Q4S_phiphiphiW133_00),
                               Mul(12, muNF, diffmatrix, W224NF.dummy)).subs(extraparvals)
 
 W266NF = linearsolver(W266NF, negativeRHS, coefmat2)
 
+DS_W133W33_00 = second_order(0, 0, W133NF, W33NF)
 TS_phiW22W133_00 = third_order(0, 0, phiNF, W22NF, W133NF)
 
 negativeRHS.actualcoord = Add(Mul(2, DS_phiW145_00), Mul(- 2, DS_W22W034_00),
@@ -2207,6 +2217,8 @@ for counter1 in range(3):
 
 print('Sixth order ready')
 
+# Determination of the coefficients of the seventh-order amplitude equation
+
 alpha13 = psiNF.dummy.dot(Add(Mul(2, muNF, diffmatrix, W15NF.dummy),
                               Mul(muNF, diffmatrix, W133NF.dummy))).subs(extraparvals)
 
@@ -2227,7 +2239,7 @@ DS_phiW286_00 = second_order(0, 0, phiNF, W286NF)
 DS_W02W15_00 = second_order(0, 0, W02NF, W15NF)
 TS_phiphiW15_00 = third_order(0, 0, phiNF, phiNF, W15NF)
 
-alpha33 = psiNF.dummy.dot(Add(Mul(2, DS_phiW076_00), Mul(2, DS_phiW286_00),
+alpha33 = psiNF.dummy.dot(Add(Mul(2, Add(DS_phiW076_00, DS_phiW286_00)),
                               Mul(4, DS_W02W15_00), Mul(6, TS_phiphiW15_00),
                               Mul(- 2, muNF, diffmatrix, W135NF.dummy),
                               Mul(2, muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
@@ -2330,26 +2342,21 @@ TS_phiphiW133_02 = third_order(0, 2, phiNF, phiNF, W133NF)
 alpha63 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W136_10), Mul(bNF[1], SS_W136_01),
                           Mul(aNF[2], SS_W135_10), Mul(bNF[2], SS_W135_01),
                           Mul(Pow(aNF[1], 2), SS_W135_20), Mul(aNF[1], bNF[1], SS_W135_11),
-                          Mul(Pow(bNF[1], 2), SS_W135_02), Mul(2, DS_phiW056_00),
-                          Mul(2, DS_phiW256_00), Mul(4, DS_W02W125_00),
-                          Mul(2, DS_W12W035_00), Mul(2, DS_W12W235_00),
-                          Mul(4, DS_W03W134_00), Mul(2, DS_W13W034_00),
-                          Mul(2, DS_W13W234_00), Mul(4, DS_W133W04_00),
-                          Mul(2, aNF[1], DS_phiW035_10), Mul(2, aNF[1], DS_phiW235_10),
-                          Mul(2, bNF[1], DS_phiW035_01), Mul(2, bNF[1], DS_phiW235_01),
+                          Mul(Pow(bNF[1], 2), SS_W135_02), Mul(2, Add(DS_phiW056_00, DS_phiW256_00)),
+                          Mul(4, DS_W02W125_00), Mul(2, Add(DS_W12W035_00, DS_W12W235_00)),
+                          Mul(4, DS_W03W134_00), Mul(2, Add(DS_W13W034_00, DS_W13W234_00)),
+                          Mul(4, DS_W133W04_00), Mul(2, aNF[1], Add(DS_phiW035_10, DS_phiW235_10)),
+                          Mul(2, bNF[1], Add(DS_phiW035_01, DS_phiW235_01)),
                           Mul(4, aNF[1], DS_W02W134_10), Mul(4, bNF[1], DS_W02W134_01),
-                          Mul(2, aNF[1], DS_W12W034_10), Mul(2, aNF[1], DS_W12W234_10),
-                          Mul(2, bNF[1], DS_W12W034_01), Mul(2, bNF[1], DS_W12W234_01),
+                          Mul(2, aNF[1], Add(DS_W12W034_10, DS_W12W234_10)),
+                          Mul(2, bNF[1], Add(DS_W12W034_01, DS_W12W234_01)),
                           Mul(4, aNF[1], DS_W03W133_10), Mul(4, bNF[1], DS_W03W133_01),
-                          Mul(2, aNF[2], DS_phiW034_10), Mul(2, aNF[2], DS_phiW234_10),
-                          Mul(2, bNF[2], DS_phiW034_10), Mul(2, bNF[2], DS_phiW234_01),
+                          Mul(2, aNF[2], Add(DS_phiW034_10, DS_phiW234_10)),
+                          Mul(2, bNF[2], Add(DS_phiW034_01, DS_phiW234_01)),
                           Mul(4, aNF[2], DS_W02W133_10), Mul(4, bNF[2], DS_W02W133_01),
-                          Mul(2, Pow(aNF[1], 2), DS_phiW034_20),
-                          Mul(2, Pow(aNF[1], 2), DS_phiW234_20),
-                          Mul(2, aNF[1], bNF[1], DS_phiW034_11),
-                          Mul(2, aNF[1], bNF[1], DS_phiW234_11),
-                          Mul(2, Pow(bNF[1], 2), DS_phiW034_02),
-                          Mul(2, Pow(bNF[1], 2), DS_phiW234_02),
+                          Mul(2, Pow(aNF[1], 2), Add(DS_phiW034_20, DS_phiW234_20)),
+                          Mul(2, aNF[1], bNF[1], Add(DS_phiW034_11, DS_phiW234_11)),
+                          Mul(2, Pow(bNF[1], 2), Add(DS_phiW034_02, DS_phiW234_02)),
                           Mul(4, Pow(aNF[1], 2), DS_W02W133_20),
                           Mul(4, aNF[1], bNF[1], DS_W02W133_11),
                           Mul(4, Pow(bNF[1], 2), DS_W02W133_02), Mul(6, TS_phiphiW125_00),
@@ -2385,17 +2392,16 @@ Q4S_phiphiW133W02_00 = fourth_order(0, 0, phiNF, phiNF, W133NF, W02NF)
 Q4S_phiphiW133W22_00 = fourth_order(0, 0, phiNF, phiNF, W133NF, W22NF)
 Q5S_phiphiphiphiW133_00 = fifth_order(0, 0, phiNF, phiNF, phiNF, phiNF, W133NF)
 
-alpha73 = psiNF.dummy.dot(Add(Mul(2, DS_phiW066_00), Mul(2, DS_phiW266_00),
-                              Mul(4, DS_W02W135_00), Mul(- 2, DS_W22W145_00),
-                              Mul(2, DS_W22W335_00), Mul(2, DS_W123W034_00),
-                              Mul(2, DS_W123W234_00), Mul(4, DS_W133W024_00),
-                              Mul(6, TS_phiphiW135_00), Mul(- 3, TS_phiphiW145_00),
-                              Mul(3, TS_phiphiW335_00), Mul(12, TS_phiW02W034_00),
-                              Mul(12, TS_phiW02W234_00), Mul(6, TS_phiW22W034_00),
-                              Mul(6, TS_phiW22W234_00), Mul(12, TS_phiW123W133_00),
+alpha73 = psiNF.dummy.dot(Add(Mul(2, Add(DS_phiW066_00, DS_phiW266_00)),
+                              Mul(4, DS_W02W135_00), Mul(- 2, Add(DS_W22W145_00, - DS_W22W335_00)),
+                              Mul(2, Add(DS_W123W034_00, DS_W123W234_00)), Mul(4, DS_W133W024_00),
+                              Mul(3, Add(Mul(2, TS_phiphiW135_00), - TS_phiphiW145_00, TS_phiphiW335_00)),
+                              Mul(6, Add(Mul(2, TS_phiW02W034_00), Mul(2, TS_phiW02W234_00),
+                                         TS_phiW22W034_00, TS_phiW22W234_00)),
+                              Mul(12, TS_phiW123W133_00),
                               Mul(12, TS_W02W02W133_00), Mul(6, TS_W22W22W133_00),
-                              Mul(12, Q4S_phiphiphiW034_00), Mul(12, Q4S_phiphiphiW234_00),
-                              Mul(48, Q4S_phiphiW133W02_00), Mul(24, Q4S_phiphiW133W22_00),
+                              Mul(12, Add(Q4S_phiphiphiW034_00, Q4S_phiphiphiW234_00)),
+                              Mul(24, Add(Mul(2, Q4S_phiphiW133W02_00), Q4S_phiphiW133W22_00)),
                               Mul(30, Q5S_phiphiphiphiW133_00),
                               Mul(6, muNF, diffmatrix, W175NF.dummy))).subs(extraparvals)
 
@@ -2404,10 +2410,9 @@ SS_W146_01 = first_order(0, 1, W146NF)
 SS_W145_20 = first_order(2, 0, W145NF)
 SS_W145_11 = first_order(1, 1, W145NF)
 SS_W145_02 = first_order(0, 2, W145NF)
-DS_W12W135_00 = second_order(0, 0, W12NF, W135NF)
 DS_W22W125_00 = second_order(0, 0, W22NF, W125NF)
 DS_W23W134_00 = second_order(0, 0, W23NF, W134NF)
-DS_W24W133_00 = second_order(0, 0, W24NF, W133NF)
+DS_W133W24_00 = second_order(0, 0, W133NF, W24NF)
 DS_W22W134_10 = second_order(1, 0, W22NF, W134NF)
 DS_W22W134_01 = second_order(0, 1, W22NF, W134NF)
 DS_W133W23_10 = second_order(1, 0, W133NF, W23NF)
@@ -2420,9 +2425,9 @@ alpha83 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W146_10), Mul(bNF[1], SS_W146_01),
                               Mul(aNF[2], SS_W145_10), Mul(bNF[2], SS_W145_01),
                               Mul(Pow(aNF[1], 2), SS_W145_20), Mul(aNF[1], bNF[1], SS_W145_11),
                               Mul(Pow(bNF[1], 2), SS_W145_02), Mul(- 2, DS_phiW056_00),
-                              Mul(- 2, DS_W12W135_00), Mul(- 2, DS_W22W125_00),
+                              Mul(- 2, DS_W12W035_00), Mul(- 2, DS_W22W125_00),
                               Mul(- 2, DS_W13W034_00), Mul(- 2, DS_W23W134_00),
-                              Mul(- 2, DS_W24W133_00), Mul(- 2, aNF[1], DS_phiW035_10),
+                              Mul(- 2, DS_W133W24_00), Mul(- 2, aNF[1], DS_phiW035_10),
                               Mul(- 2, bNF[1], DS_phiW035_01), Mul(- 2, aNF[1], DS_W12W034_10),
                               Mul(- 2, bNF[1], DS_W12W034_01), Mul(- 2, aNF[1], DS_W22W134_10),
                               Mul(- 2, bNF[1], DS_W22W134_01), Mul(- 2, aNF[1], DS_W133W23_10),
@@ -2454,15 +2459,15 @@ TS_phiW133W123_00 = third_order(0, 0, phiNF, W133NF, W123NF)
 TS_phiW133W33_00 = third_order(0, 0, phiNF, W133NF, W33NF)
 TS_W02W22W133_00 = third_order(0, 0, W02NF, W22NF, W133NF)
 
-alpha93 = psiNF.dummy.dot(Add(Mul(- 2, DS_phiW066_00), Mul(2, DS_phiW276_00), Mul(4, DS_W02W145_00),
+alpha93 = psiNF.dummy.dot(Add(Mul(- 2, Add(DS_phiW066_00, - DS_phiW276_00)), Mul(4, DS_W02W145_00),
                               Mul(- 2, DS_W22W135_00), Mul(- 2, DS_W123W034_00),
                               Mul(- 2, DS_W133W224_00), Mul(- 2, DS_W33W234_00),
-                              Mul(- 3, TS_phiphiW135_00), Mul(6, TS_phiphiW145_00),
-                              Mul(- 12, TS_phiW02W034_00), Mul(- 6, TS_phiW22W034_00),
-                              Mul(- 6, TS_phiW22W234_00), Mul(- 6, TS_phiW133W123_00),
-                              Mul(- 6, TS_phiW133W33_00), Mul(- 12, TS_W02W22W133_00),
-                              Mul(- 12, Q4S_phiphiphiW034_00), Mul(- 4, Q4S_phiphiphiW234_00),
-                              Mul(- 24, Q4S_phiphiW133W02_00), Mul(- 24, Q4S_phiphiW133W22_00),
+                              Mul(- 3, Add(TS_phiphiW135_00, Mul(- 2, TS_phiphiW145_00))),
+                              Mul(- 12, TS_phiW02W034_00), Mul(- 6, Add(TS_phiW22W034_00, TS_phiW22W234_00)),
+                              Mul(- 6, Add(TS_phiW133W123_00, TS_phiW133W33_00)),
+                              Mul(- 12, TS_W02W22W133_00),
+                              Mul(- 4, Add(Mul(3, Q4S_phiphiphiW034_00), Q4S_phiphiphiW234_00)),
+                              Mul(- 24, Add(Q4S_phiphiW133W02_00, Q4S_phiphiW133W22_00)),
                               Mul(- 20, Q5S_phiphiphiphiW133_00),
                               Mul(4, muNF, diffmatrix, W175NF.dummy))).subs(extraparvals)
 
@@ -2478,8 +2483,8 @@ alpha103 = psiNF.dummy.dot(Add(Mul(2, DS_phiW246_00), Mul(- 2, DS_W133W034_00),
 DS_phiW046_00 = second_order(0, 0, phiNF, W046NF)
 DS_W133W234_00 = second_order(0, 0, W133NF, W234NF)
 
-alpha113 = psiNF.dummy.dot(Add(Mul(4, DS_phiW046_00), Mul(2, DS_W133W034_00),
-                               Mul(2, DS_W133W234_00), Mul(6, TS_phiW133W133_00),
+alpha113 = psiNF.dummy.dot(Add(Mul(4, DS_phiW046_00), Mul(2, Add(DS_W133W034_00, DS_W133W234_00)),
+                               Mul(6, TS_phiW133W133_00),
                                Mul(- 2, muNF, diffmatrix, W135NF.dummy),
                                Mul(- 4, muNF, diffmatrix, W145NF.dummy),
                                Mul(4, muNF, diffmatrix, W123NF.dummy))).subs(extraparvals)
@@ -2756,111 +2761,74 @@ alpha133 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W166_10), Mul(bNF[1], SS_W166_01),
                                Mul(Pow(aNF[1], 2), Pow(bNF[1], 2), SS_W123_22),
                                Mul(aNF[1], Pow(bNF[1], 3), SS_W123_13),
                                Mul(Pow(bNF[1], 4), SS_W123_04),
-                               Mul(4, DS_phiW06_00), Mul(2, DS_phiW26_00),
-                               Mul(4, DS_W12W05_00), Mul(2, DS_W12W25_00),
-                               Mul(4, DS_W13W04_00), Mul(2, DS_W13W24_00),
-                               Mul(4, DS_W14W03_00), Mul(2, DS_W14W23_00),
-                               Mul(4, DS_W155W02_00), Mul(2, DS_W155W22_00),
-                               Mul(4, aNF[1], DS_phiW05_10), Mul(2, aNF[1], DS_phiW25_10),
-                               Mul(4, bNF[1], DS_phiW05_01), Mul(2, bNF[1], DS_phiW25_01),
-                               Mul(4, aNF[1], DS_W12W04_10), Mul(2, aNF[1], DS_W12W24_10),
-                               Mul(4, bNF[1], DS_W12W04_01), Mul(2, bNF[1], DS_W12W24_01),
-                               Mul(4, aNF[1], DS_W13W03_10), Mul(2, aNF[1], DS_W13W23_10),
-                               Mul(4, bNF[1], DS_W13W03_01), Mul(2, bNF[1], DS_W13W23_01),
-                               Mul(4, aNF[1], DS_W14W02_10), Mul(2, aNF[1], DS_W14W22_10),
-                               Mul(4, bNF[1], DS_W14W02_01), Mul(2, bNF[1], DS_W14W22_01),
-                               Mul(4, aNF[2], DS_phiW04_10), Mul(2, aNF[2], DS_phiW24_10),
-                               Mul(4, bNF[2], DS_phiW04_01), Mul(2, bNF[2], DS_phiW24_01),
-                               Mul(4, aNF[2], DS_W12W03_10), Mul(2, aNF[2], DS_W12W23_10),
-                               Mul(4, bNF[2], DS_W12W03_01), Mul(2, bNF[2], DS_W12W23_01),
-                               Mul(4, aNF[2], DS_W13W02_10), Mul(2, aNF[2], DS_W13W22_10),
-                               Mul(4, bNF[2], DS_W13W02_01), Mul(2, bNF[2], DS_W13W22_01),
-                               Mul(4, aNF[3], DS_phiW03_10), Mul(2, aNF[3], DS_phiW23_10),
-                               Mul(4, bNF[3], DS_phiW03_01), Mul(2, bNF[3], DS_phiW23_01),
-                               Mul(4, aNF[3], DS_W12W02_10), Mul(2, aNF[3], DS_W12W22_10),
-                               Mul(4, bNF[3], DS_W12W02_01), Mul(2, bNF[3], DS_W12W22_01),
-                               Mul(4, aNF[4], DS_phiW02_10), Mul(2, aNF[4], DS_phiW22_10),
-                               Mul(4, bNF[4], DS_phiW02_01), Mul(2, bNF[4], DS_phiW22_01),
-                               Mul(4, Pow(aNF[1], 2), DS_phiW04_20),
-                               Mul(2, Pow(aNF[1], 2), DS_phiW24_20),
-                               Mul(4, aNF[1], bNF[1], DS_phiW04_11),
-                               Mul(2, aNF[1], bNF[1], DS_phiW24_11),
-                               Mul(4, Pow(bNF[1], 2), DS_phiW04_02),
-                               Mul(2, Pow(bNF[1], 2), DS_phiW24_02),
-                               Mul(4, Pow(aNF[1], 2), DS_W12W03_20),
-                               Mul(2, Pow(aNF[1], 2), DS_W12W23_20),
-                               Mul(4, aNF[1], bNF[1], DS_W12W03_11),
-                               Mul(2, aNF[1], bNF[1], DS_W12W23_11),
-                               Mul(4, Pow(bNF[1], 2), DS_W12W03_02),
-                               Mul(2, Pow(bNF[1], 2), DS_W12W23_02),
-                               Mul(4, Pow(aNF[1], 2), DS_W13W02_20),
-                               Mul(2, Pow(aNF[1], 2), DS_W13W22_20),
-                               Mul(4, aNF[1], bNF[1], DS_W13W02_11),
-                               Mul(2, aNF[1], bNF[1], DS_W13W22_11),
-                               Mul(4, Pow(bNF[1], 2), DS_W13W02_02),
-                               Mul(2, Pow(bNF[1], 2), DS_W13W22_02),
-                               Mul(8, aNF[1], aNF[2], DS_phiW03_20),
-                               Mul(4, aNF[1], aNF[2], DS_phiW23_20),
-                               Mul(4, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_phiW03_11),
-                               Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_phiW23_11),
-                               Mul(8, bNF[1], bNF[2], DS_phiW03_02),
-                               Mul(4, bNF[1], bNF[2], DS_phiW23_02),
-                               Mul(8, aNF[1], aNF[2], DS_W12W02_20),
-                               Mul(4, aNF[1], aNF[2], DS_W12W22_20),
-                               Mul(4, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_W12W02_11),
-                               Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])), DS_W12W22_11),
-                               Mul(8, bNF[1], bNF[2], DS_W12W02_02),
-                               Mul(4, bNF[1], bNF[2], DS_W12W22_02),
-                               Mul(8, aNF[1], aNF[3], DS_phiW02_20),
-                               Mul(4, aNF[1], aNF[3], DS_phiW22_20),
-                               Mul(4, Add(Mul(aNF[1], bNF[3]), Mul(aNF[3], bNF[1])), DS_phiW02_11),
-                               Mul(2, Add(Mul(aNF[1], bNF[3]), Mul(aNF[3], bNF[1])), DS_phiW22_11),
-                               Mul(8, bNF[1], bNF[3], DS_phiW02_02),
-                               Mul(4, bNF[1], bNF[3], DS_phiW22_02),
-                               Mul(4, Pow(aNF[2], 2), DS_phiW02_20),
-                               Mul(2, Pow(aNF[2], 2), DS_phiW22_20),
-                               Mul(4, aNF[2], bNF[2], DS_phiW02_11),
-                               Mul(2, aNF[2], bNF[2], DS_phiW22_11),
-                               Mul(4, Pow(bNF[2], 2), DS_phiW02_02),
-                               Mul(2, Pow(bNF[2], 2), DS_phiW22_02),
-                               Mul(4, Pow(aNF[1], 3), DS_phiW03_30),
-                               Mul(2, Pow(aNF[1], 3), DS_phiW23_30),
-                               Mul(4, Pow(aNF[1], 2), bNF[1], DS_phiW03_21),
-                               Mul(2, Pow(aNF[1], 2), bNF[1], DS_phiW23_21),
-                               Mul(4, aNF[1], Pow(bNF[1], 2), DS_phiW03_12),
-                               Mul(2, aNF[1], Pow(bNF[1], 2), DS_phiW23_12),
-                               Mul(4, Pow(bNF[1], 3), DS_phiW03_03),
-                               Mul(2, Pow(bNF[1], 3), DS_phiW23_03),
-                               Mul(4, Pow(aNF[1], 3), DS_W12W02_30),
-                               Mul(2, Pow(aNF[1], 3), DS_W12W22_30),
-                               Mul(4, Pow(aNF[1], 2), bNF[1], DS_W12W02_21),
-                               Mul(2, Pow(aNF[1], 2), bNF[1], DS_W12W22_21),
-                               Mul(4, aNF[1], Pow(bNF[1], 2), DS_W12W02_12),
-                               Mul(2, aNF[1], Pow(bNF[1], 2), DS_W12W22_12),
-                               Mul(4, Pow(bNF[1], 3), DS_W12W02_03),
-                               Mul(2, Pow(bNF[1], 3), DS_W12W22_03),
-                               Mul(12, Pow(aNF[1], 2), aNF[2], DS_phiW02_30),
-                               Mul(6, Pow(aNF[1], 2), aNF[2], DS_phiW22_30),
-                               Mul(8, aNF[1], aNF[2], bNF[1], DS_phiW02_21),
-                               Mul(4, aNF[1], aNF[2], bNF[1], DS_phiW22_21),
-                               Mul(4, aNF[2], Pow(bNF[1], 2), DS_phiW02_12),
-                               Mul(2, aNF[2], Pow(bNF[1], 2), DS_phiW22_12),
-                               Mul(4, Pow(aNF[1], 2), bNF[2], DS_phiW02_21),
-                               Mul(2, Pow(aNF[1], 2), bNF[2], DS_phiW22_21),
-                               Mul(8, aNF[1], bNF[1], bNF[2], DS_phiW02_12),
-                               Mul(4, aNF[1], bNF[1], bNF[2], DS_phiW22_12),
-                               Mul(12, Pow(bNF[1], 2), bNF[2], DS_phiW02_03),
-                               Mul(6, Pow(bNF[1], 2), bNF[2], DS_phiW22_03),
-                               Mul(4, Pow(aNF[1], 4), DS_phiW02_40),
-                               Mul(2, Pow(aNF[1], 4), DS_phiW22_40),
-                               Mul(4, Pow(aNF[1], 3), bNF[1], DS_phiW02_31),
-                               Mul(2, Pow(aNF[1], 3), bNF[1], DS_phiW22_31),
-                               Mul(4, Pow(aNF[1], 2), Pow(bNF[1], 2), DS_phiW02_22),
-                               Mul(2, Pow(aNF[1], 2), Pow(bNF[1], 2), DS_phiW22_22),
-                               Mul(4, aNF[1], Pow(bNF[1], 3), DS_phiW02_13),
-                               Mul(2, aNF[1], Pow(bNF[1], 3), DS_phiW22_13),
-                               Mul(4, Pow(bNF[1], 4), DS_phiW02_04),
-                               Mul(2, Pow(bNF[1], 4), DS_phiW22_04),
+                               Mul(2, Add(Mul(2, DS_phiW06_00), DS_phiW26_00)),
+                               Mul(2, Add(Mul(2, DS_W12W05_00), DS_W12W25_00)),
+                               Mul(2, Add(Mul(2, DS_W13W04_00), DS_W13W24_00)),
+                               Mul(2, Add(Mul(2, DS_W14W03_00), DS_W14W23_00)),
+                               Mul(2, Add(Mul(2, DS_W155W02_00), DS_W155W22_00)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_phiW05_10), DS_phiW25_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_phiW05_01), DS_phiW25_01)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_W12W04_10), DS_W12W24_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_W12W04_01), DS_W12W24_01)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_W13W03_10), DS_W13W23_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_W13W03_01), DS_W13W23_01)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_W14W02_10), DS_W14W22_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_W14W02_01), DS_W14W22_01)),
+                               Mul(2, aNF[2], Add(Mul(2, DS_phiW04_10), DS_phiW24_10)),
+                               Mul(2, bNF[2], Add(Mul(2, DS_phiW04_01), DS_phiW24_01)),
+                               Mul(2, aNF[2], Add(Mul(2, DS_W12W03_10), DS_W12W23_10)),
+                               Mul(2, bNF[2], Add(Mul(2, DS_W12W03_01), DS_W12W23_01)),
+                               Mul(2, aNF[2], Add(Mul(2, DS_W13W02_10), DS_W13W22_10)),
+                               Mul(2, bNF[2], Add(Mul(2, DS_W13W02_01), DS_W13W22_01)),
+                               Mul(2, aNF[3], Add(Mul(2, DS_phiW03_10), DS_phiW23_10)),
+                               Mul(2, bNF[3], Add(Mul(2, DS_phiW03_01), DS_phiW23_01)),
+                               Mul(2, aNF[3], Add(Mul(2, DS_W12W02_10), DS_W12W22_10)),
+                               Mul(2, bNF[3], Add(Mul(2, DS_W12W02_01), DS_W12W22_01)),
+                               Mul(2, aNF[4], Add(Mul(2, DS_phiW02_10), DS_phiW22_10)),
+                               Mul(2, bNF[4], Add(Mul(2, DS_phiW02_01), DS_phiW22_01)),
+                               Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_phiW04_20), DS_phiW24_20)),
+                               Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_phiW04_11), DS_phiW24_11)),
+                               Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_phiW04_02), DS_phiW24_02)),
+                               Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_W12W03_20), DS_W12W23_20)),
+                               Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_W12W03_11), DS_W12W23_11)),
+                               Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_W12W03_02), DS_W12W23_02)),
+                               Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_W13W02_20), DS_W13W22_20)),
+                               Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_W13W02_11), DS_W13W22_11)),
+                               Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_W13W02_02), DS_W13W22_02)),
+                               Mul(4, aNF[1], aNF[2], Add(Mul(2, DS_phiW03_20), DS_phiW23_20)),
+                               Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])),
+                                   Add(Mul(2, DS_phiW03_11), DS_phiW23_11)),
+                               Mul(4, bNF[1], bNF[2], Add(Mul(2, DS_phiW03_02), DS_phiW23_02)),
+                               Mul(4, aNF[1], aNF[2], Add(Mul(2, DS_W12W02_20), DS_W12W22_20)),
+                               Mul(2, Add(Mul(aNF[1], bNF[2]), Mul(aNF[2], bNF[1])),
+                                   Add(Mul(2, DS_W12W02_11), DS_W12W22_11)),
+                               Mul(4, bNF[1], bNF[2], Add(Mul(2, DS_W12W02_02), DS_W12W22_02)),
+                               Mul(4, aNF[1], aNF[3], Add(Mul(2, DS_phiW02_20), DS_phiW22_20)),
+                               Mul(2, Add(Mul(aNF[1], bNF[3]), Mul(aNF[3], bNF[1])),
+                                   Add(Mul(2, DS_phiW02_11), DS_phiW22_11)),
+                               Mul(4, bNF[1], bNF[3], Add(Mul(2, DS_phiW02_02), DS_phiW22_02)),
+                               Mul(2, Pow(aNF[2], 2), Add(Mul(2, DS_phiW02_20), DS_phiW22_20)),
+                               Mul(2, aNF[2], bNF[2], Add(Mul(2, DS_phiW02_11), DS_phiW22_11)),
+                               Mul(2, Pow(bNF[2], 2), Add(Mul(2, DS_phiW02_02), DS_phiW22_02)),
+                               Mul(2, Pow(aNF[1], 3), Add(Mul(2, DS_phiW03_30), DS_phiW23_30)),
+                               Mul(2, Pow(aNF[1], 2), bNF[1], Add(Mul(2, DS_phiW03_21), DS_phiW23_21)),
+                               Mul(2, aNF[1], Pow(bNF[1], 2), Add(Mul(2, DS_phiW03_12), DS_phiW23_12)),
+                               Mul(2, Pow(bNF[1], 3), Add(Mul(2, DS_phiW03_03), DS_phiW23_03)),
+                               Mul(2, Pow(aNF[1], 3), Add(Mul(2, DS_W12W02_30), DS_W12W22_30)),
+                               Mul(2, Pow(aNF[1], 2), bNF[1], Add(Mul(2, DS_W12W02_21), DS_W12W22_21)),
+                               Mul(2, aNF[1], Pow(bNF[1], 2), Add(Mul(2, DS_W12W02_12), DS_W12W22_12)),
+                               Mul(2, Pow(bNF[1], 3), Add(Mul(2, DS_W12W02_03), DS_W12W22_03)),
+                               Mul(6, Pow(aNF[1], 2), aNF[2], Add(Mul(2, DS_phiW02_30), DS_phiW22_30)),
+                               Mul(4, aNF[1], aNF[2], bNF[1], Add(Mul(2, DS_phiW02_21), DS_phiW22_21)),
+                               Mul(2, aNF[2], Pow(bNF[1], 2), Add(Mul(2, DS_phiW02_12), DS_phiW22_12)),
+                               Mul(2, Pow(aNF[1], 2), bNF[2], Add(Mul(2, DS_phiW02_21), DS_phiW22_21)),
+                               Mul(4, aNF[1], bNF[1], bNF[2], Add(Mul(2, DS_phiW02_12), DS_phiW22_12)),
+                               Mul(6, Pow(bNF[1], 2), bNF[2], Add(Mul(2, DS_phiW02_03), DS_phiW22_03)),
+                               Mul(2, Pow(aNF[1], 4), Add(Mul(2, DS_phiW02_40), DS_phiW22_40)),
+                               Mul(2, Pow(aNF[1], 3), bNF[1], Add(Mul(2, DS_phiW02_31), DS_phiW22_31)),
+                               Mul(2, Pow(aNF[1], 2), Pow(bNF[1], 2), Add(Mul(2, DS_phiW02_22), DS_phiW22_22)),
+                               Mul(2, aNF[1], Pow(bNF[1], 3), Add(Mul(2, DS_phiW02_13), DS_phiW22_13)),
+                               Mul(2, Pow(bNF[1], 4), Add(Mul(2, DS_phiW02_04), DS_phiW22_04)),
                                Mul(9, TS_phiphiW155_00), Mul(18, TS_phiW12W14_00),
                                Mul(9, TS_phiW13W13_00), Mul(9, TS_W12W12W13_00),
                                Mul(9, aNF[1], TS_phiphiW14_10), Mul(9, bNF[1], TS_phiphiW14_01),
@@ -3049,108 +3017,86 @@ Q5S_phiphiphiphiphi_02 = fifth_order(0, 2, phiNF, phiNF, phiNF, phiNF, phiNF)
 alpha143 = psiNF.dummy.dot(Add(Mul(aNF[1], SS_W176_10), Mul(bNF[1], SS_W176_01),
                                Mul(aNF[2], SS_W175_10), Mul(bNF[2], SS_W175_01),
                                Mul(Pow(aNF[1], 2), SS_W175_20), Mul(aNF[1], bNF[1], SS_W175_11),
-                               Mul(Pow(bNF[1], 2), SS_W175_02), Mul(4, DS_phiW026_00),
-                               Mul(2, DS_phiW226_00), Mul(4, DS_W12W025_00),
-                               Mul(2, DS_W12W225_00), Mul(2, DS_W22W35_00),
-                               Mul(4, DS_W03W124_00), Mul(4, DS_W13W024_00),
-                               Mul(2, DS_W13W224_00), Mul(4, DS_W123W04_00),
-                               Mul(2, DS_W123W24_00), Mul(2, DS_W23W124_00),
-                               Mul(2, DS_W23W34_00), Mul(2, DS_W33W24_00),
-                               Mul(4, DS_W165W02_00), Mul(2, DS_W165W22_00),
-                               Mul(4, aNF[1], DS_phiW025_10), Mul(2, aNF[1], DS_phiW225_10),
-                               Mul(4, bNF[1], DS_phiW025_01), Mul(2, bNF[1], DS_phiW225_01),
-                               Mul(4, aNF[1], DS_W12W024_10), Mul(2, aNF[1], DS_W12W224_10),
-                               Mul(4, bNF[1], DS_W12W024_01), Mul(2, bNF[1], DS_W12W224_01),
-                               Mul(4, aNF[1], DS_W123W03_10), Mul(2, aNF[1], DS_W123W23_10),
-                               Mul(4, bNF[1], DS_W123W03_01), Mul(2, bNF[1], DS_W123W23_01),
-                               Mul(4, aNF[1], DS_W124W02_10), Mul(2, aNF[1], DS_W124W22_10),
-                               Mul(4, bNF[1], DS_W124W02_01), Mul(2, bNF[1], DS_W124W22_01),
+                               Mul(Pow(bNF[1], 2), SS_W175_02), Mul(2, Add(Mul(2, DS_phiW026_00), DS_phiW226_00)),
+                               Mul(2, Add(Mul(2, DS_W12W025_00), DS_W12W225_00)),
+                               Mul(2, DS_W22W35_00), Mul(4, DS_W03W124_00),
+                               Mul(2, Add(Mul(2, DS_W13W024_00), DS_W13W224_00)),
+                               Mul(2, Add(Mul(2, DS_W123W04_00), DS_W123W24_00)),
+                               Mul(2, Add(DS_W23W124_00, DS_W23W34_00)),
+                               Mul(2, DS_W33W24_00), Mul(2, Add(Mul(2, DS_W165W02_00), DS_W165W22_00)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_phiW025_10), DS_phiW225_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_phiW025_01), DS_phiW225_01)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_W12W024_10), DS_W12W224_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_W12W024_01), DS_W12W224_01)),
+                               Mul(2, aNF[1], Add(Mul(2,  DS_W123W03_10), DS_W123W23_10)),
+                               Mul(2, bNF[1], Add(Mul(2,  DS_W123W03_01), DS_W123W23_01)),
+                               Mul(2, aNF[1], Add(Mul(2, DS_W124W02_10), DS_W124W22_10)),
+                               Mul(2, bNF[1], Add(Mul(2, DS_W124W02_01), DS_W124W22_01)),
                                Mul(2, aNF[1], DS_W22W34_10), Mul(2, bNF[1], DS_W22W34_01),
                                Mul(2, aNF[1], DS_W23W33_10), Mul(2, bNF[1], DS_W23W33_01),
-                               Mul(4, aNF[2], DS_phiW024_10), Mul(2, aNF[2], DS_phiW224_10),
-                               Mul(4, bNF[2], DS_phiW024_01), Mul(2, bNF[2], DS_phiW224_01),
+                               Mul(2, aNF[2], Add(Mul(2, DS_phiW024_10), DS_phiW224_10)),
+                               Mul(2, bNF[2], Add(Mul(2, DS_phiW024_01), DS_phiW224_01)),
                                Mul(2, aNF[2], DS_W22W33_10), Mul(2, bNF[2], DS_W22W33_01),
-                               Mul(4, aNF[2], DS_W123W02_10), Mul(2, aNF[2], DS_W123W22_10),
-                               Mul(4, bNF[2], DS_W123W02_01), Mul(2, bNF[2], DS_W123W22_01),
-                               Mul(4, Pow(aNF[1], 2), DS_phiW024_20),
-                               Mul(2, Pow(aNF[1], 2), DS_phiW224_20),
-                               Mul(4, aNF[1], bNF[1], DS_phiW024_11),
-                               Mul(2, aNF[1], bNF[1], DS_phiW224_11),
-                               Mul(4, Pow(bNF[1], 2), DS_phiW024_02),
-                               Mul(2, Pow(bNF[1], 2), DS_phiW224_02),
+                               Mul(2, aNF[2], Add(Mul(2, DS_W123W02_10), DS_W123W22_10)),
+                               Mul(2, bNF[2], Add(Mul(2, DS_W123W02_01), DS_W123W22_01)),
+                               Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_phiW024_20), DS_phiW224_20)),
+                               Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_phiW024_11), DS_phiW224_11)),
+                               Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_phiW024_02), DS_phiW224_02)),
                                Mul(2, Pow(aNF[1], 2), DS_W22W33_20),
                                Mul(2, aNF[1], bNF[1], DS_W22W33_11),
-                               Mul(2, Pow(bNF[1], 2), DS_W22W33_02),
-                               Mul(4, Pow(aNF[1], 2), DS_W123W02_20),
-                               Mul(2, Pow(aNF[1], 2), DS_W123W22_20),
-                               Mul(4, aNF[1], bNF[1], DS_W123W02_11),
-                               Mul(2, aNF[1], bNF[1], DS_W123W22_11),
-                               Mul(4, Pow(bNF[1], 2), DS_W123W02_02),
-                               Mul(2, Pow(bNF[1], 2), DS_W123W22_02),
-                               Mul(9, TS_phiphiW165_00), Mul(3, TS_phiphiW35_00),
-                               Mul(24, TS_phiW02W04_00), Mul(12, TS_phiW02W24_00),
-                               Mul(18, TS_phiW12W124_00), Mul(6, TS_phiW12W34_00),
-                               Mul(12, TS_phiW22W04_00), Mul(12, TS_phiW22W24_00),
-                               Mul(12, TS_phiW03W03_00), Mul(12, TS_phiW03W23_00),
-                               Mul(18, TS_phiW13W123_00), Mul(6, TS_phiW13W33_00),
-                               Mul(6, TS_phiW23W23_00), Mul(12, TS_W02W13W02_00),
-                               Mul(12, TS_W02W13W22_00), Mul(24, TS_W02W12W03_00),
-                               Mul(12, TS_W02W12W23_00), Mul(9, TS_W12W12W123_00),
-                               Mul(3, TS_W12W12W33_00), Mul(12, TS_W12W22W03_00),
-                               Mul(12, TS_W12W22W23_00), Mul(6, TS_W22W22W13_00),
-                               Mul(9, aNF[1], TS_phiphiW124_10), Mul(3, aNF[1], TS_phiphiW34_10),
-                               Mul(9, bNF[1], TS_phiphiW124_01), Mul(3, bNF[1], TS_phiphiW34_01),
-                               Mul(24, aNF[1], TS_phiW02W03_10), Mul(12, aNF[1], TS_phiW02W23_10),
-                               Mul(24, bNF[1], TS_phiW02W03_01), Mul(12, bNF[1], TS_phiW02W23_01),
-                               Mul(18, aNF[1], TS_phiW12W123_10), Mul(6, aNF[1], TS_phiW12W33_10),
-                               Mul(18, bNF[1], TS_phiW12W123_01), Mul(6, bNF[1], TS_phiW12W33_01),
-                               Mul(12, aNF[1], TS_phiW22W03_10), Mul(12, aNF[1], TS_phiW22W23_10),
-                               Mul(12, bNF[1], TS_phiW22W03_01), Mul(12, bNF[1], TS_phiW22W23_01),
+                               Mul(2, Pow(bNF[1], 2), DS_W22W33_02),  
+                               Mul(2, Pow(aNF[1], 2), Add(Mul(2, DS_W123W02_20), DS_W123W22_20)),
+                               Mul(2, aNF[1], bNF[1], Add(Mul(2, DS_W123W02_11), DS_W123W22_11)),
+                               Mul(2, Pow(bNF[1], 2), Add(Mul(2, DS_W123W02_02), DS_W123W22_02)),
+                               Mul(3, Add(Mul(3, TS_phiphiW165_00), TS_phiphiW35_00)),
+                               Mul(12, Add(Mul(2, TS_phiW02W04_00), TS_phiW02W24_00)),
+                               Mul(6, Add(Mul(3, TS_phiW12W124_00), TS_phiW12W34_00)),
+                               Mul(12, Add(TS_phiW22W04_00, TS_phiW22W24_00)),
+                               Mul(12, Add(TS_phiW03W03_00, TS_phiW03W23_00)),
+                               Mul(6, Add(Mul(3, TS_phiW13W123_00), TS_phiW13W33_00)),
+                               Mul(6, TS_phiW23W23_00), Mul(12, Add(TS_W02W13W02_00, TS_W02W13W22_00)),
+                               Mul(12, Add(Mul(2, TS_W02W12W03_00), TS_W02W12W23_00)),
+                               Mul(3, Add(Mul(3, TS_W12W12W123_00), TS_W12W12W33_00)),
+                               Mul(12, Add(TS_W12W22W03_00, TS_W12W22W23_00)),
+                               Mul(6, TS_W22W22W13_00),
+                               Mul(3, aNF[1], Add(Mul(3, TS_phiphiW124_10), TS_phiphiW34_10)),
+                               Mul(3, bNF[1], Add(Mul(3, TS_phiphiW124_01), TS_phiphiW34_01)),
+                               Mul(12, aNF[1], Add(Mul(2, TS_phiW02W03_10), TS_phiW02W23_10)),
+                               Mul(12, bNF[1], Add(Mul(2, TS_phiW02W03_01), TS_phiW02W23_01)),
+                               Mul(6, aNF[1], Add(Mul(3, TS_phiW12W123_10), TS_phiW12W33_10)),
+                               Mul(6, bNF[1], Add(Mul(3, TS_phiW12W123_01), TS_phiW12W33_01)),
+                               Mul(12, aNF[1], Add(TS_phiW22W03_10, TS_phiW22W23_10)),
+                               Mul(12, bNF[1], Add(TS_phiW22W03_01, TS_phiW22W23_01)),
                                Mul(12, aNF[1], TS_W02W02W12_10), Mul(12, bNF[1], TS_W02W02W12_01),
-                               Mul(12, aNF[1], TS_W12W22W02_10), Mul(6, aNF[1], TS_W12W22W22_10),
-                               Mul(12, bNF[1], TS_W12W22W02_01), Mul(6, bNF[1], TS_W12W22W22_01),
-                               Mul(9, aNF[2], TS_phiphiW123_10), Mul(3, aNF[2], TS_phiphiW33_10),
-                               Mul(9, bNF[2], TS_phiphiW123_01), Mul(3, bNF[2], TS_phiphiW33_01),
+                               Mul(6, aNF[1], Add(Mul(2, TS_W12W22W02_10), TS_W12W22W22_10)),
+                               Mul(6, bNF[1], Add(Mul(2, TS_W12W22W02_01), TS_W12W22W22_01)),
+                               Mul(3, aNF[2], Add(Mul(3, TS_phiphiW123_10), TS_phiphiW33_10)),
+                               Mul(3, bNF[2], Add(Mul(3, TS_phiphiW123_01), TS_phiphiW33_01)),
                                Mul(12, aNF[2], TS_phiW02W02_10), Mul(12, bNF[2], TS_phiW02W02_01),
-                               Mul(12, aNF[2], TS_phiW22W02_10), Mul(6, aNF[2], TS_phiW22W22_10),
-                               Mul(12, bNF[2], TS_phiW22W02_01), Mul(6, bNF[2], TS_phiW22W22_01),
-                               Mul(9, Pow(aNF[1], 2), TS_phiphiW123_20),
-                               Mul(3, Pow(aNF[1], 2), TS_phiphiW33_20),
-                               Mul(9, aNF[1], bNF[1], TS_phiphiW123_11),
-                               Mul(3, aNF[1], bNF[1], TS_phiphiW33_11),
-                               Mul(9, Pow(bNF[1], 2), TS_phiphiW123_02),
-                               Mul(3, Pow(bNF[1], 2), TS_phiphiW33_02),
+                               Mul(6, aNF[2], Add(Mul(2, TS_phiW22W02_10), TS_phiW22W22_10)),
+                               Mul(6, bNF[2], Add(Mul(2, TS_phiW22W02_01), TS_phiW22W22_01)),
+                               Mul(3, Pow(aNF[1], 2), Add(Mul(3, TS_phiphiW123_20), TS_phiphiW33_20)),
+                               Mul(3, aNF[1], bNF[1], Add(Mul(3, TS_phiphiW123_11), TS_phiphiW33_11)),
+                               Mul(3, Pow(bNF[1], 2), Add(Mul(3, TS_phiphiW123_02), TS_phiphiW33_02)),                             
                                Mul(12, Pow(aNF[1], 2), TS_phiW02W02_20),
                                Mul(12, aNF[1], bNF[1], TS_phiW02W02_11),
                                Mul(12, Pow(bNF[1], 2), TS_phiW02W02_02),
-                               Mul(12, Pow(aNF[1], 2), TS_phiW22W02_20),
-                               Mul(6, Pow(aNF[1], 2), TS_phiW22W22_20),
-                               Mul(12, aNF[1], bNF[1], TS_phiW22W02_11),
-                               Mul(6, aNF[1], bNF[1], TS_phiW22W22_11),
-                               Mul(12, Pow(bNF[1], 2), TS_phiW22W02_02),
-                               Mul(6, Pow(bNF[1], 2), TS_phiW22W22_02),
-                               Mul(24, Q4S_phiphiphiW04_00), Mul(16, Q4S_phiphiphiW24_00),
-                               Mul(72, Q4S_phiphiW12W03_00), Mul(48, Q4S_phiphiW12W23_00),
-                               Mul(72, Q4S_phiphiW13W02_00), Mul(48, Q4S_phiphiW13W22_00),
-                               Mul(72, Q4S_phiW12W12W02_00), Mul(48, Q4S_phiW12W12W22_00),
-                               Mul(24, aNF[1], Q4S_phiphiphiW03_10),
-                               Mul(16, aNF[1], Q4S_phiphiphiW23_10),
-                               Mul(24, bNF[1], Q4S_phiphiphiW03_01),
-                               Mul(16, bNF[1], Q4S_phiphiphiW23_01),
-                               Mul(72, aNF[1], Q4S_phiphiW12W02_10),
-                               Mul(48, aNF[1], Q4S_phiphiW12W22_10),
-                               Mul(72, bNF[1], Q4S_phiphiW12W02_01),
-                               Mul(48, bNF[1], Q4S_phiphiW12W22_01),
-                               Mul(24, aNF[2], Q4S_phiphiphiW02_10),
-                               Mul(16, aNF[2], Q4S_phiphiphiW22_10),
-                               Mul(24, bNF[2], Q4S_phiphiphiW02_01),
-                               Mul(16, bNF[2], Q4S_phiphiphiW22_01),
-                               Mul(24, Pow(aNF[1], 2), Q4S_phiphiphiW02_20),
-                               Mul(16, Pow(aNF[1], 2), Q4S_phiphiphiW22_20),
-                               Mul(24, aNF[1], bNF[1], Q4S_phiphiphiW02_11),
-                               Mul(16, aNF[1], bNF[1], Q4S_phiphiphiW22_11),
-                               Mul(24, Pow(bNF[1], 2), Q4S_phiphiphiW02_02),
-                               Mul(16, Pow(bNF[1], 2), Q4S_phiphiphiW22_02),
+                               Mul(6, Pow(aNF[1], 2), Add(Mul(2, TS_phiW22W02_20), TS_phiW22W22_20)),
+                               Mul(6, aNF[1], bNF[1], Add(Mul(2, TS_phiW22W02_11), TS_phiW22W22_11)),
+                               Mul(6, Pow(bNF[1], 2), Add(Mul(2, TS_phiW22W02_02), TS_phiW22W22_02)),
+                               Mul(8, Add(Mul(3, Q4S_phiphiphiW04_00), Mul(2, Q4S_phiphiphiW24_00))),
+                               Mul(24, Add(Mul(3, Q4S_phiphiW12W03_00), Mul(2, Q4S_phiphiW12W23_00))),
+                               Mul(24, Add(Mul(3, Q4S_phiphiW13W02_00), Mul(2, Q4S_phiphiW13W22_00))),
+                               Mul(24, Add(Mul(3, Q4S_phiW12W12W02_00), Mul(2, Q4S_phiW12W12W22_00))),
+                               Mul(8, aNF[1], Add(Mul(3, Q4S_phiphiphiW03_10), Mul(2, Q4S_phiphiphiW23_10))),
+                               Mul(8, bNF[1], Add(Mul(3, Q4S_phiphiphiW03_01), Mul(2, Q4S_phiphiphiW23_01))),
+                               Mul(24, aNF[1], Add(Mul(3, Q4S_phiphiW12W02_10), Mul(2, Q4S_phiphiW12W22_10))),
+                               Mul(24, bNF[1], Add(Mul(3, Q4S_phiphiW12W02_01), Mul(2, Q4S_phiphiW12W22_01))),
+                               Mul(8, aNF[2], Add(Mul(3, Q4S_phiphiphiW02_10), Mul(2, Q4S_phiphiphiW22_10))),
+                               Mul(8, bNF[2], Add(Mul(3, Q4S_phiphiphiW02_01), Mul(2, Q4S_phiphiphiW22_01))),
+                               Mul(8, Pow(aNF[1], 2), Add(Mul(3, Q4S_phiphiphiW02_20), Mul(2, Q4S_phiphiphiW22_20))),
+                               Mul(8, aNF[1], bNF[1], Add(Mul(3, Q4S_phiphiphiW02_11), Mul(2, Q4S_phiphiphiW22_11))),
+                               Mul(8, Pow(bNF[1], 2), Add(Mul(3, Q4S_phiphiphiW02_02), Mul(2, Q4S_phiphiphiW22_02))),
                                Mul(50, Q5S_phiphiphiphiW13_00), Mul(100, Q5S_phiphiphiW12W12_00),
                                Mul(50, aNF[1], Q5S_phiphiphiphiW12_10),
                                Mul(50, bNF[1], Q5S_phiphiphiphiW12_01),
@@ -3204,27 +3150,27 @@ S6S_phiphiphiphiphiW02_00 = sixth_order(0, 0, phiNF, phiNF, phiNF, phiNF, phiNF,
 S6S_phiphiphiphiphiW22_00 = sixth_order(0, 0, phiNF, phiNF, phiNF, phiNF, phiNF, W22NF)
 S7S_phiphiphiphiphiphiphi_00 = seventh_order(0, 0, phiNF, phiNF, phiNF, phiNF, phiNF, phiNF, phiNF)
 
-alpha153 = psiNF.dummy.dot(Add(Mul(4, DS_phiW036_00), Mul(2, DS_phiW236_00),
-                               Mul(2, DS_W22W325_00), Mul(4, DS_W123W024_00),
-                               Mul(2, DS_W123W224_00), Mul(2, DS_W33W224_00),
-                               Mul(2, DS_W33W44_00), Mul(4, DS_W175W02_00),
-                               Mul(2, DS_W175W22_00), Mul(9, TS_phiphiW175_00),
-                               Mul(3, TS_phiphiW325_00), Mul(24, TS_phiW02W024_00),
-                               Mul(12, TS_phiW02W224_00), Mul(12, TS_phiW22W024_00),
-                               Mul(12, TS_phiW22W224_00), Mul(6, TS_phiW22W44_00),
-                               Mul(9, TS_phiW123W123_00), Mul(6, TS_phiW123W33_00),
+alpha153 = psiNF.dummy.dot(Add(Mul(2, Add(Mul(2, DS_phiW036_00), DS_phiW236_00)),
+                               Mul(2, DS_W22W325_00), Mul(2, Add(Mul(2, DS_W123W024_00), DS_W123W224_00)),
+                               Mul(2, Add(DS_W33W224_00, DS_W33W44_00)),
+                               Mul(2, Add(Mul(2, DS_W175W02_00), DS_W175W22_00)),
+                               Mul(3, Add(Mul(3, TS_phiphiW175_00), TS_phiphiW325_00)),
+                               Mul(12, Add(Mul(2, TS_phiW02W024_00), TS_phiW02W224_00)),
+                               Mul(6, Add(Mul(2, TS_phiW22W024_00), Mul(2, TS_phiW22W224_00), TS_phiW22W44_00)),
+                               Mul(3, Add(Mul(3, TS_phiW123W123_00), Mul(2, TS_phiW123W33_00))),
                                Mul(6, TS_phiW33W33_00), Mul(12, TS_W02W02W123_00),
-                               Mul(12, TS_W02W22W123_00), Mul(12, TS_W02W22W33_00),
-                               Mul(6, TS_W22W22W123_00), Mul(3, TS_W22W22W33_00),
-                               Mul(24, Q4S_phiphiphiW024_00), Mul(16, Q4S_phiphiphiW224_00),
-                               Mul(4, Q4S_phiphiphiW44_00), Mul(72, Q4S_phiphiW02W123_00),
-                               Mul(24, Q4S_phiphiW02W33_00), Mul(48, Q4S_phiphiW22W123_00),
-                               Mul(36, Q4S_phiphiW22W33_00), Mul(32, Q4S_phiW02W02W02_00),
-                               Mul(48, Q4S_phiW02W02W22_00), Mul(48, Q4S_phiW22W22W02_00),
-                               Mul(12, Q4S_phiW22W22W22_00), Mul(50, Q5S_phiphiphiphiW123_00),
-                               Mul(25, Q5S_phiphiphiphiW33_00), Mul(120, Q5S_phiphiphiW02W02_00),
-                               Mul(160, Q5S_phiphiphiW02W22_00), Mul(70, Q5S_phiphiphiW22W22_00),
-                               Mul(120, S6S_phiphiphiphiphiW02_00), Mul(90, S6S_phiphiphiphiphiW22_00),
+                               Mul(12, Add(TS_W02W22W123_00, TS_W02W22W33_00)),
+                               Mul(3, Add(Mul(2, TS_W22W22W123_00), TS_W22W22W33_00)),
+                               Mul(4, Add(Mul(6, Q4S_phiphiphiW024_00), Mul(4, Q4S_phiphiphiW224_00),
+                                          Q4S_phiphiphiW44_00)),
+                               Mul(24, Add(Mul(3, Q4S_phiphiW02W123_00), Q4S_phiphiW02W33_00)),
+                               Mul(12, Add(Mul(4, Q4S_phiphiW22W123_00), Mul(3, Q4S_phiphiW22W33_00))),
+                               Mul(16, Add(Mul(2, Q4S_phiW02W02W02_00), Mul(3, Q4S_phiW02W02W22_00))),
+                               Mul(12, Add(Mul(4, Q4S_phiW22W22W02_00), Q4S_phiW22W22W22_00)),
+                               Mul(25, Add(Mul(2, Q5S_phiphiphiphiW123_00), Q5S_phiphiphiphiW33_00)),
+                               Mul(40, Add(Mul(3, Q5S_phiphiphiW02W02_00), Mul(4, Q5S_phiphiphiW02W22_00))),
+                               Mul(70, Q5S_phiphiphiW22W22_00),
+                               Mul(30, Add(Mul(4, S6S_phiphiphiphiphiW02_00), Mul(3, S6S_phiphiphiphiphiW22_00))),
                                Mul(35, S7S_phiphiphiphiphiphiphi_00))).subs(extraparvals)
 
 alpha14 = Add(alpha53, - Mul(alpha5, alpha13, Pow(alpha1, - 1)),
