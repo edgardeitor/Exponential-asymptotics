@@ -1,0 +1,1 @@
+This folder contains the Python code to compute the various orders' amplitude equations for a general n-component system centred at a Maxwell point, and finds the asymptotic expansion of the Maxwell point up to order 7.
