@@ -2,12 +2,12 @@ This folder contains the Python code to compute the amplitude equations at order
 
 To run the code, you need to have the following packages installed
 
-IPython
+IPython 8.30.0
 os
 shutil
 sys
-sympy
-mpmath
+sympy 1.13.3
+mpmath 1.3.0
 math
 
 The structure of the code remains consistent, and each demo has the same variables defined within its respective file. Specifically, the file needs to contain the definitions of
