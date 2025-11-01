@@ -43,3 +43,16 @@ The structure of the code remains consistent, and each demo has the same variabl
 -a boolean variable, simple, which states whether the equations for $\alpha_{i, 2}$ are solved explicitly or not (this variable is relevant only when the coefficients $a_1, b_1, a_3, b_3, a_5, b_5$ have not been set to be zero from the start);
 
 -and a function, extrapars(extraparvals), that edits the dictionary that evaluates the parameters of the expansion following, for example, the structure extraparvals[aNF[1]] = 0, to say that a_1 = 0, for the parameter a of your system.
+
+Specifically, the code was run to obtain each of the amplitude equations given in the paper, with the following variables:
+
+-modelname='Swift-Hohenberg' corresponds to the first example in the paper: Swift-Hohenberg 2-3.
+
+-modelname='SHDM' corresponds to the second example in the paper: Swift-Hohenberg 3-5.
+
+-modelname='Schnakenberg' corresponds to the third example in the paper: Modified Schnakenberg system.
+
+-modelname='Brusselator' corresponds to the fourth example in the paper: Brusselator.
+
+-modelname='Bru 4' corresponds to the fifth example in the paper: 4-component Brusselator.
+
