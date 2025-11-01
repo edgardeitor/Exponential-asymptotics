@@ -34,9 +34,9 @@ After setting the system up and choosing the maximum order you would like to exp
 
 The folders are named according to the models shown in the paper:
 
--'Swift-Hohenberg': Swift-Hohenberg 2-3.
+-'Swift-Hohenberg 2-3': Swift-Hohenberg 2-3.
 
--'SHDM': Swift-Hohenberg 3-5
+-'Swift-Hohenberg 3-5': Swift-Hohenberg 3-5
 
 -'Schnakenberg': Modified Schnakenberg system
 
