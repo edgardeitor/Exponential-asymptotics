@@ -22,8 +22,6 @@ kinetics = ["r*u - u - 2*v + s*u**3 - u**5",
 
 tol = 1e-7
 
-parameter_functions = {}
-
 phiunit = 'n'
 
 simp = 'y'
