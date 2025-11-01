@@ -1,6 +1,6 @@
-This folder contains the Python code to compute the amplitude equations at orders 5, 6, and 7, for a general n-component system centred at a Maxwell point, and finds the asymptotic expansion of this point up to order 7. The main Python code is called 'Beyond-all-order asymptotics.py', and it requires to be in the same folder with the file 'functions.py' and, to run the code to compute the amplitude equations for an example foo, you need a file foo.py within the folder foo. This file is needed to define the system to be studied.
+This folder contains the Python code to compute the amplitude equations at orders 5, 6, and 7, for a general n-component system centred at a Maxwell point, and finds the asymptotic expansion of this point up to order 7. The main Python code is called 'Beyond-all-order asymptotics.py', and it requires being in the same folder as the file 'functions.py'. To run the code to compute the amplitude equations for an example foo, you need a file foo.py within the folder foo. This file is needed to define the system to be studied.
 
-To run the code, you need to have the following packages installed
+To run the code, you need to have Python 3.13.5, together with the following packages installed
 
 IPython 8.30.0
 
@@ -42,7 +42,7 @@ The structure of the code remains consistent, and each demo has the same variabl
 
 -a boolean variable, simple, which states whether the equations for $\alpha_{i, 2}$ are solved explicitly or not (this variable is relevant only when the coefficients $a_1, b_1, a_3, b_3, a_5, b_5$ have not been set to be zero from the start);
 
--and a function, extrapars(extraparvals), that edits the dictionary that evaluates the parameters of the expansion following, for example, the structure extraparvals[aNF[1]] = 0, to say that a_1 = 0, for the parameter a of your system.
+-and a function, extrapars(extraparvals), that edits the dictionary that evaluates the parameters of the expansion following, for example, the structure extraparvals[aNF[1]] = 0, to say that a_1 = 0, for first-order expansion of the parameter a of your system.
 
 Specifically, the code was run to obtain each of the amplitude equations given in the paper, with the following variables:
 
