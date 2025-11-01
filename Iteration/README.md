@@ -26,7 +26,7 @@ Specifically, the code needs the following variables to run correctly:
 
 -A3eval, which represents an array to evaluate the first-order expansion of $A_3$ at $X_0$.
 
--kinetics, which represents an array with the vector field $\mbf f$ defined by the system \eqref{geneq};
+-kinetics, which represents an array with the vector field, $\mbf f$, defined by the system \eqref{geneq};
 
 -diffmatrix, which represents a two-dimensional array for the diffusion matrix, $\hat D$, defined by the system \eqref{geneq};
 
