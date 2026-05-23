@@ -3,18 +3,8 @@ This folder contains the Python code to compute the amplitude equations at order
 To run the code, you need to have Python 3.13.5, together with the following packages installed
 
 IPython 8.30.0
-
-os
-
-shutil
-
-sys
-
 sympy 1.13.3
-
 mpmath 1.3.0
-
-math
 
 The structure of the code remains consistent, and each demo has the same variables defined within its respective file. Specifically, the file needs to contain the definitions of
 
@@ -44,7 +34,9 @@ The structure of the code remains consistent, and each demo has the same variabl
 
 -and a function, extrapars(extraparvals), that edits the dictionary that evaluates the parameters of the expansion following, for example, the structure extraparvals[aNF[1]] = 0, to say that a_1 = 0, for first-order expansion of the parameter a of your system.
 
-Specifically, the code was run to obtain each of the amplitude equations given in the paper, with the following variables:
+This code outputs in the Terminal all the variables that are needed to run the Mathematica code, including a objs.pkl file within the folder foo with the values of the coefficients of the amplitude equation at order 5, alpha1--alpha7 (see Equation (7) in the paper), the first order expansion of A_1 (see Equation (29)) and A_3 (see Equation (D.11)) at X_0, eta (see Equation (28)), xi (see Equation (28)), and the values of the expansions of the parameters. To load these values, one just needs to run the last four commented lines of the code.
+
+This code was run to obtain each of the amplitude equations given in the paper, with the following variables:
 
 -modelname='Swift-Hohenberg' corresponds to the first example in the paper: Swift-Hohenberg 2-3.
 
@@ -55,4 +47,3 @@ Specifically, the code was run to obtain each of the amplitude equations given i
 -modelname='Brusselator' corresponds to the fourth example in the paper: Brusselator.
 
 -modelname='Bru 4' corresponds to the fifth example in the paper: 4-component Brusselator.
-

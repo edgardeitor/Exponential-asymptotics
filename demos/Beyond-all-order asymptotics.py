@@ -1,6 +1,7 @@
 # Package import
 
 from IPython import get_ipython
+from IPython.display import display, Math
 get_ipython().run_line_magic('reset', '-sf')
 
 import os
@@ -11,6 +12,8 @@ init_printing()
 from sympy.solvers import solve
 from mpmath import findroot
 import math
+from pathlib import Path
+import pickle
 
 # Setting up the variables for the expansion. This includes shifting system to the origin and checking that the steady state provided ar correct
 
@@ -23,7 +26,7 @@ if not os.path.isdir(modelname):
           'the data file inside named in the same way.')
     exit()
 else:
-    os.chdir(os.getcwd() + '\\' + modelname)
+    os.chdir(Path(modelname))
 
 try:
     exec(open(modelname + '.py').read())
@@ -36,7 +39,7 @@ nvar = len(var)
 # Checking for the file functions.py
 
 try:
-    exec(open(os.path.dirname(os.path.realpath(__file__)) + '\\functions.py').read())
+    exec(open(Path(__file__).resolve().parent / "functions.py").read())
 except:
     print('File functions.py is not in the same folder as the script you are running')
     exit()
@@ -59,6 +62,8 @@ for varnum in range(nvar):
         print('The script could not define ' + (var[varnum]) + ' as a variable')
         exit()
     file.write(latex(var[varnum]) + '\n')
+
+file.close()
 
 # Checking for parameters
 
@@ -3670,3 +3675,12 @@ invcoefK2 = Pow(coefK2, - 1)
 if simp=='y':
     coefK2 = simplify(coefK2)
     invcoefK2 = simplify(invcoefK2)
+    
+with open('objs.pkl', 'wb') as f:
+    pickle.dump([alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, alpha7, C11NF,
+                 A3_coef.subs(omega1NF, 0), etaNF, xiNF, extraparvals], f)
+    
+# import pickle
+
+# with open('objs.pkl', 'rb') as f:
+#     alpha1, alpha2, alpha3, alpha4, alpha5, alpha6, alpha7, C11NF, A3_coef, etaNF, xiNF, extraparvals = pickle.load(f)
