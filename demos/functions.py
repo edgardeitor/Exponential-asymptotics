@@ -1,5 +1,5 @@
 class Vector:
-    '''This class defines a vector and a dummy version of it to fasten code.'''
+    '''This class defines a vector and a dummy version of it to make the code faster'''
     def __init__(self, name):
         '''
         This function generates a vector as a 1D matrix, and defines its coordinates as symbolic dummy variables.
@@ -15,7 +15,7 @@ class Vector:
         self.dummy = Matrix(self.dummy)
             
 class matrix:
-    '''This class defines a sympy Matrix and a dummy version of it to fasten the code.'''
+    '''This class defines a sympy Matrix and a dummy version of it to make the code faster'''
     def __init__(self, name, ncol = nvar, refmatrix = ones(nvar)):
         '''
         This function generates a matrix, and defines its coordinates as symbolic dummy variables.
