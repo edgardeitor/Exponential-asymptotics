@@ -7,4 +7,4 @@ After this, one can go to the folder called 'Iteration' to set the Mathematica c
 
 The code works in a simple way, but it is long because of the number of steps that need to be followed. See details in Appendix D of arXiv preprint arXiv:2501.02698, or the documentation within the file functions.py inside the folder demos.
 
-Feel free to contact me if there are any problems with setting anything up: edgardo.villar-sepulveda@bristol.ac.uk
+Feel free to contact me if there are any problems with setting anything up: e.villar-sepulveda@tum.de
